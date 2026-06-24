@@ -1,0 +1,20 @@
+{
+  "short_name": "BulSU Space",
+  "name": "BulSU Space",
+  "icons": [
+    {
+      "src": "images/bulsu-space-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "images/bulsu-space-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

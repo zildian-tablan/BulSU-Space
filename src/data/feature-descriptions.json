@@ -1,0 +1,74 @@
+[
+  {
+    "title": "Real-time Messaging",
+    "bubbles": [
+      "Connect instantly with peers and faculty.",
+      "Secure chats with read receipts and typing indicators.",
+      "Private and group conversations for classes and projects."
+    ]
+  },
+  {
+    "title": "Announcement Posting",
+    "bubbles": [
+      "Centralized announcements from admins and faculty.",
+      "Pin and highlight important messages.",
+      "Keep the whole community informed in one place."
+    ]
+  },
+  {
+    "title": "Timely Notifications",
+    "bubbles": [
+      "Never miss important updates.",
+      "Cross-device notifications and summaries.",
+      "Customize what matters to you."
+    ]
+  },
+  {
+    "title": "Multi-Factor Authentication",
+    "bubbles": [
+      "Add extra layers of protection to your account.",
+      "Supports email verification and optional MFA.",
+      "Keep your academic data secure."
+    ]
+  },
+  {
+    "title": "Role-Based Access Control",
+    "bubbles": [
+      "Permissions tailored to student, faculty, and admin roles.",
+      "Restrict sensitive actions to authorized users.",
+      "Simplifies campus-wide governance."
+    ]
+  },
+  {
+    "title": "Group Spaces",
+    "bubbles": [
+      "Dedicated spaces for classes, clubs, and projects.",
+      "Share files, discussions, and resources.",
+      "Collaborate with clear structure and roles."
+    ]
+  },
+  {
+    "title": "Real-time Updates",
+    "bubbles": [
+      "Synchronized content across devices.",
+      "Online presence indicators and live edits.",
+      "Fast, consistent experience for everyone."
+    ]
+  },
+  {
+    "title": "Academic Integration",
+    "bubbles": [
+      "Connect to university calendars and resources.",
+      "Link courses, schedules, and academic tools.",
+      "Streamline your workflow inside BulSU Space."
+    ]
+  },
+  {
+    "title": "Content Recommendations",
+    "bubbles": [
+      "Discover relevant academic resources.",
+      "Personalized suggestions to help your studies.",
+      "Connect with peers and topics you care about."
+    ]
+  }
+]

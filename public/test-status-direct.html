@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BulSU Space Status Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+    }
+    button {
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background-color: #3367d6;
+    }
+    input {
+      padding: 8px;
+      margin: 5px;
+      width: 250px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    #output {
+      background-color: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 20px;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>BulSU Space Status Test</h1>
+    
+    <div id="auth-section">
+      <h2>Authentication</h2>
+      
+      <div class="form-group">
+        <label for="email">Email:</label>
+        <input type="email" id="email" placeholder="Enter your BulSU email">
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Password:</label>
+        <input type="password" id="password" placeholder="Enter password">
+      </div>
+      
+      <button id="login-btn">Login</button>
+      <button id="logout-btn">Logout</button>
+    </div>
+    
+    <div id="diagnostics-section">
+      <h2>Advanced Diagnostics</h2>
+      <button id="check-database-btn">Check Database &amp; Rules</button>
+      <button id="check-connection-btn">Check Connection</button>
+    </div>
+    
+    <div id="status-section">
+      <h2>Status Testing</h2>
+      <div class="form-group">
+        <label for="user-id">User ID (or use logged in user):</label>
+        <input type="text" id="user-id" placeholder="User ID (optional)">
+      </div>
+      <button id="write-status-btn">Write Status (Online)</button>
+      <button id="write-offline-btn">Write Status (Offline)</button>
+      <button id="test-all-methods-btn">Test All Write Methods</button>
+      <button id="try-auth-write-btn">Try Authenticated Write</button>
+      <button id="try-alt-methods-btn">Try Alternative Methods</button>
+    </div>
+    
+    <h2>Console Output</h2>
+    <div id="output"></div>
+  </div>
+  
+  <!-- Include Firebase SDK from CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  
+  <!-- Include our test script -->
+  <script src="test-status-write.js"></script>
+  
+  <script>
+    // DOM elements
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const userIdInput = document.getElementById('user-id');
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const writeStatusBtn = document.getElementById('write-status-btn');
+    const writeOfflineBtn = document.getElementById('write-offline-btn');
+    const testAllMethodsBtn = document.getElementById('test-all-methods-btn');
+    const output = document.getElementById('output');
+    
+    // Helper function to log messages
+    function log(message, isError = false) {
+      const timestamp = new Date().toTimeString().split(' ')[0];
+      const logMessage = `[${timestamp}] ${message}`;
+      
+      console.log(logMessage);
+      
+      if (isError) {
+        output.innerHTML += `<div style="color: #f44336">${logMessage}</div>`;
+      } else {
+        output.innerHTML += `<div>${logMessage}</div>`;
+      }
+      
+      output.scrollTop = output.scrollHeight;
+    }
+    
+    // Initialize Firebase (using the function from our script)
+    initFirebase();
+    
+    // Login button handler
+    loginBtn.addEventListener('click', async () => {
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      
+      if (!email || !password) {
+        log('Please enter email and password', true);
+        return;
+      }
+      
+      try {
+        log(`Attempting to sign in with ${email}...`);
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        
+        log(`Signed in successfully as ${user.email} (${user.uid})`);
+        userIdInput.value = user.uid;
+      } catch (error) {
+        log(`Login failed: ${error.message}`, true);
+      }
+    });
+    
+    // Logout button handler
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        await auth.signOut();
+        log('Signed out successfully');
+      } catch (error) {
+        log(`Logout failed: ${error.message}`, true);
+      }
+    });
+    
+    // Write status button handler with detailed error logging
+    writeStatusBtn.addEventListener('click', async () => {
+      const userId = userIdInput.value.trim() || (auth.currentUser ? auth.currentUser.uid : null);
+      
+      if (!userId) {
+        log('Please provide a user ID or sign in first', true);
+        return;
+      }
+      
+      log(`Writing ONLINE status for user: ${userId}`);
+      
+      try {
+        // Try directly using the Firebase SDK instead of the test function
+        log('Attempting direct database write with Firebase SDK...');
+        
+        // First try with a token refresh to ensure we have fresh auth tokens
+        if (auth.currentUser) {
+          try {
+            log('Refreshing auth token first...');
+            await auth.currentUser.getIdToken(true);
+            log('Token refresh successful');
+          } catch (tokenErr) {
+            log(`Token refresh failed: ${tokenErr.message}`, true);
+          }
+        }
+        
+        // Get a direct database reference
+        const statusRef = firebase.database().ref(`status/${userId}`);
+        
+        // Write simple data 
+        await statusRef.set({
+          state: 'online',
+          lastActive: Date.now(),
+          timestamp: Date.now(),
+          directWrite: true
+        });
+        
+        log('🟢 Direct database write successful!');
+        
+        // Try reading back what we just wrote
+        const snapshot = await statusRef.once('value');
+        log(`Current data at status/${userId}: ${JSON.stringify(snapshot.val())}`);
+        
+        // Also check database rules
+        log('Checking database rules...');
+        const rulesSnapshot = await firebase.database().ref('.info/connected').once('value');
+        log(`Connected status: ${rulesSnapshot.val()}`);
+      } catch (error) {
+        log(`🔴 Direct write failed with error: ${error.message}`, true);
+        log(`Error code: ${error.code}`, true);
+        log(`Error details: ${JSON.stringify(error)}`, true);
+        
+        if (error.message.includes('permission_denied')) {
+          log('⚠️ This appears to be a SECURITY RULES issue. Database rules are preventing writes.', true);
+        }
+      }
+      
+      // Also try the test function for comparison
+      try {
+        log('Now trying with the testStatusWrite function...');
+        const result = await testStatusWrite(userId, 'online');
+        
+        if (result) {
+          log('Test function status write successful!');
+        } else {
+          log('Test function status write failed!', true);
+        }
+      } catch (testError) {
+        log(`Test function error: ${testError.message}`, true);
+      }
+    });
+    
+    // Write offline status button handler
+    writeOfflineBtn.addEventListener('click', async () => {
+      const userId = userIdInput.value.trim() || (auth.currentUser ? auth.currentUser.uid : null);
+      
+      if (!userId) {
+        log('Please provide a user ID or sign in first', true);
+        return;
+      }
+      
+      log(`Writing OFFLINE status for user: ${userId}`);
+      const result = await testStatusWrite(userId, 'offline');
+      
+      if (result) {
+        log('Status write successful!');
+      } else {
+        log('Status write failed!', true);
+      }
+    });
+    
+    // Test all methods button handler with diagnostic features
+    testAllMethodsBtn.addEventListener('click', async () => {
+      const userId = userIdInput.value.trim() || (auth.currentUser ? auth.currentUser.uid : null);
+      
+      if (!userId) {
+        log('Please provide a user ID or sign in first', true);
+        return;
+      }
+      
+      // Check connectivity and permissions first
+      log('--- PERFORMING DIAGNOSTIC CHECKS ---');
+      
+      // 1. Check Firebase connection status
+      try {
+        log('1. Checking connection status...');
+        const connectedRef = firebase.database().ref('.info/connected');
+        const snapshot = await connectedRef.once('value');
+        
+        if (snapshot.val() === true) {
+          log('✅ Firebase Realtime Database connection established');
+        } else {
+          log('⚠️ Not connected to Firebase Realtime Database', true);
+        }
+      } catch (connErr) {
+        log(`❌ Connection check error: ${connErr.message}`, true);
+      }
+      
+      // 2. Check authentication status
+      try {
+        log('2. Checking authentication...');
+        if (auth.currentUser) {
+          log(`✅ Authenticated as ${auth.currentUser.email} (${auth.currentUser.uid})`);
+          
+          // Refresh token
+          await auth.currentUser.getIdToken(true);
+          log('Auth token refreshed');
+        } else {
+          log('❌ Not authenticated', true);
+        }
+      } catch (authErr) {
+        log(`❌ Authentication check error: ${authErr.message}`, true);
+      }
+      
+      // 3. Try read access to the status path
+      try {
+        log(`3. Checking read access to status/${userId}...`);
+        const statusRef = firebase.database().ref(`status/${userId}`);
+        const snapshot = await statusRef.once('value');
+        
+        log(`✅ Read access successful. Current data: ${JSON.stringify(snapshot.val())}`);
+      } catch (readErr) {
+        log(`❌ Read access error: ${readErr.message}`, true);
+      }
+      
+      // 4. Try a minimal write to a test path
+      try {
+        log(`4. Testing minimal write to status/${userId}/test...`);
+        const testRef = firebase.database().ref(`status/${userId}/test`);
+        await testRef.set({
+          timestamp: Date.now()
+        });
+        
+        log('✅ Test write successful!');
+      } catch (writeErr) {
+        log(`❌ Test write error: ${writeErr.message}`, true);
+        
+        if (writeErr.message.includes('permission_denied')) {
+          log(`
+⚠️ SECURITY RULES ISSUE DETECTED ⚠️
+It appears your Firebase Security Rules are blocking writes to the status path.
+Please check your database.rules.json file and ensure it allows authenticated users
+to write to their own status path.
+
+Example rule that would allow this:
+"status": {
+  "$uid": {
+    ".read": "auth !== null",
+    ".write": "$uid === auth.uid || auth.token.admin === true"
+  }
+}`, true);
+        }
+      }
+      
+      // Now try all test methods
+      log('--- RUNNING COMPREHENSIVE WRITE TESTS ---');
+      log(`Testing all write methods for user: ${userId}`);
+      const result = await testAllStatusWrites(userId);
+      
+      if (result) {
+        log('All tests completed. Check console for details.');
+      } else {
+        log('Tests failed!', true);
+      }
+    });
+    
+    // Listen for auth state changes
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        log(`Currently signed in as: ${user.email} (${user.uid})`);
+        userIdInput.value = user.uid;
+      } else {
+        log('Not signed in');
+        userIdInput.value = '';
+      }
+    });
+    
+    // Database rules check button
+    document.getElementById('check-database-btn').addEventListener('click', async () => {
+      log('--- CHECKING DATABASE CONFIGURATION ---');
+      
+      try {
+        // Check database URL
+        log(`Database URL: ${firebase.database().app.options.databaseURL}`);
+        
+        // Check if we can read the .info paths which are always readable
+        log('Checking .info paths...');
+        
+        const infoRef = firebase.database().ref('.info');
+        
+        // Check connected status
+        try {
+          const connectedSnapshot = await infoRef.child('connected').once('value');
+          log(`Connected: ${connectedSnapshot.val()}`);
+        } catch (connErr) {
+          log(`Connected check failed: ${connErr.message}`, true);
+        }
+        
+        // Try to get a token for writing (might fail due to security rules)
+        if (auth.currentUser) {
+          try {
+            log('Getting fresh auth token...');
+            const token = await auth.currentUser.getIdToken(true);
+            log(`Token obtained (length: ${token.length} chars)`);
+          } catch (tokenErr) {
+            log(`Token error: ${tokenErr.message}`, true);
+          }
+        }
+        
+        // Try a write to the authenticated user's node
+        if (auth.currentUser) {
+          try {
+            log('Testing minimal write to authenticated user status...');
+            const userId = auth.currentUser.uid;
+            
+            // First try with .update() which might have different security rules
+            await firebase.database().ref(`status/${userId}`).update({
+              lastCheck: Date.now(),
+              checkType: 'diagnostics'
+            });
+            
+            log('✅ Update operation successful!');
+            
+            // Now try with .set() to see if it's the method causing problems
+            await firebase.database().ref(`status/${userId}/diagnostics`).set({
+              setCheck: Date.now(),
+              method: 'set'
+            });
+            
+            log('✅ Set operation successful!');
+          } catch (writeErr) {
+            log(`❌ Write test failed: ${writeErr.message}`, true);
+            log(`Error code: ${writeErr.code}`, true);
+            
+            // Extract rules-related information if available
+            if (writeErr.message.includes('permission_denied')) {
+              log(`
+⚠️ SECURITY RULES BLOCKING WRITES ⚠️
+Your database rules are preventing writes to the status path.
+Please check firestore.rules or database.rules.json.
+
+Common rules that would allow this:
+{
+  "rules": {
+    "status": {
+      "$uid": {
+        ".read": "auth !== null",
+        ".write": "$uid === auth.uid"
+      }
+    }
+  }
+}`, true);
+            }
+          }
+        } else {
+          log('❌ Not authenticated. Please sign in to test writes.', true);
+        }
+      } catch (error) {
+        log(`Database check error: ${error.message}`, true);
+      }
+    });
+    
+    // Connection check button
+    document.getElementById('check-connection-btn').addEventListener('click', async () => {
+      log('--- CHECKING CONNECTION STATUS ---');
+      
+      try {
+        // 1. Browser online status
+        log(`Browser reports online: ${navigator.onLine}`);
+        
+        // 2. Firebase connection status
+        const connectedRef = firebase.database().ref('.info/connected');
+        const connectedCallback = connectedRef.on('value', (snap) => {
+          if (snap.val() === true) {
+            log('✅ Firebase RTDB connection is ACTIVE');
+          } else {
+            log('❌ Firebase RTDB connection is INACTIVE', true);
+          }
+        });
+        
+        // Clean up listener after 5 seconds
+        setTimeout(() => {
+          connectedRef.off('value', connectedCallback);
+        }, 5000);
+        
+        // 3. Try a test server ping to check for network blocks
+        log('Testing server connectivity...');
+        const testStart = Date.now();
+        const response = await fetch('https://www.google.com/generate_204', {
+          method: 'HEAD',
+          mode: 'no-cors',
+          cache: 'no-cache'
+        });
+        log(`Network connectivity test: ${Date.now() - testStart}ms`);
+        
+        // 4. Database connectivity info
+        log(`Database URL: ${firebase.database().app.options.databaseURL}`);
+        try {
+          const serverTimeOffset = await firebase.database().ref('.info/serverTimeOffset').once('value');
+          const offset = serverTimeOffset.val();
+          log(`Server time offset: ${offset}ms`);
+          log(`Server time: ${new Date(Date.now() + offset).toISOString()}`);
+        } catch (offsetErr) {
+          log(`Unable to get server time offset: ${offsetErr.message}`, true);
+        }
+      } catch (error) {
+        log(`Connection check error: ${error.message}`, true);
+      }
+    });
+    
+    // Try authenticated write button handler
+    document.getElementById('try-auth-write-btn').addEventListener('click', async () => {
+      const userId = userIdInput.value.trim() || (auth.currentUser ? auth.currentUser.uid : null);
+      
+      if (!userId) {
+        log('Please provide a user ID or sign in first', true);
+        return;
+      }
+      
+      if (!auth.currentUser) {
+        log('⚠️ You must be signed in to use authenticated write', true);
+        return;
+      }
+      
+      log(`Attempting authenticated write for user: ${userId}`);
+      
+      try {
+        // First refresh the token
+        log('Refreshing authentication token...');
+        await auth.currentUser.getIdToken(true);
+        
+        const result = await authenticatedWrite(userId);
+        
+        if (result) {
+          log('✅ Authenticated write successful!');
+          
+          // Confirm by reading back the data
+          const snapshot = await firebase.database().ref(`status/${userId}`).once('value');
+          log(`Current data: ${JSON.stringify(snapshot.val())}`);
+        } else {
+          log('❌ Authenticated write failed!', true);
+        }
+      } catch (error) {
+        log(`❌ Error during authenticated write: ${error.message}`, true);
+      }
+    });
+    
+    // Try alternative methods button handler
+    document.getElementById('try-alt-methods-btn').addEventListener('click', async () => {
+      const userId = userIdInput.value.trim() || (auth.currentUser ? auth.currentUser.uid : null);
+      
+      if (!userId) {
+        log('Please provide a user ID or sign in first', true);
+        return;
+      }
+      
+      log(`Attempting alternative write methods for user: ${userId}`);
+      
+      try {
+        // Display rules for reference
+        log('Expected database rules format:');
+        const rules = printDatabaseRules();
+        log(JSON.stringify(rules, null, 2));
+        
+        // Try multiple methods
+        const result = await attemptMultipleWriteMethods(userId);
+        
+        if (result) {
+          log('✅ At least one alternative write method succeeded!');
+          
+          // Confirm by reading back the data
+          const snapshot = await firebase.database().ref(`status/${userId}`).once('value');
+          log(`Current data: ${JSON.stringify(snapshot.val())}`);
+        } else {
+          log('❌ All alternative write methods failed!', true);
+        }
+      } catch (error) {
+        log(`❌ Error during alternative write methods: ${error.message}`, true);
+      }
+    });
+    
+    log('Status testing page loaded. Please sign in or provide a user ID to test.');
+  </script>
+</body>
+</html>

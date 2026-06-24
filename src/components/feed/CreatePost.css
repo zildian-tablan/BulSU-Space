@@ -1,0 +1,7 @@
+.visibility-dropdown-option {
+  background-color: transparent !important;
+  transition: background 0.2s;
+}
+.visibility-dropdown-option:hover {
+  background-color: rgba(59, 130, 246, 0.3) !important; /* fallback blue, override in TSX for other roles */
+}

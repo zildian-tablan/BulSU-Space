@@ -1,0 +1,29 @@
+/* This file contains Tailwind CSS compatibility fixes */
+
+/* Import Tailwind with standard imports rather than at-rules */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Add any additional overrides or fixes here */
+
+/* Text selection utilities */
+@layer utilities {
+  /* Non-selectable UI elements */
+  .user-select-none {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+  
+  /* Selectable text content */
+  .user-select-text {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+  }
+}
+
+/* Add any additional custom styles below */ 

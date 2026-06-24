@@ -1,0 +1,74 @@
+[
+  {
+    "title": "Real-time Messaging",
+    "bubbles": [
+      "Connect instantly with peers",
+      "Secure conversations & read receipts",
+      "Group chats & media sharing"
+    ]
+  },
+  {
+    "title": "Announcement Posting",
+    "bubbles": [
+      "Official notices in one place",
+      "Pinned posts from admins",
+      "Quick share to groups"
+    ]
+  },
+  {
+    "title": "Timely Notifications",
+    "bubbles": [
+      "Cross-device alerts",
+      "Custom notification preferences",
+      "Never miss an update"
+    ]
+  },
+  {
+    "title": "Multi-Factor Authentication",
+    "bubbles": [
+      "Extra account security",
+      "Email verification & more",
+      "Optional strong auth methods"
+    ]
+  },
+  {
+    "title": "Role-Based Access Control",
+    "bubbles": [
+      "Permissions by role",
+      "Faculty & student roles",
+      "Secure content access"
+    ]
+  },
+  {
+    "title": "Group Spaces",
+    "bubbles": [
+      "Dedicated class & project spaces",
+      "Shared resources & files",
+      "Manage members & roles"
+    ]
+  },
+  {
+    "title": "Real-time Updates",
+    "bubbles": [
+      "Live presence indicators",
+      "Synchronized data across devices",
+      "Instant content refreshes"
+    ]
+  },
+  {
+    "title": "Academic Integration",
+    "bubbles": [
+      "Calendar & resource links",
+      "Connect to campus systems",
+      "Single sign-on friendly"
+    ]
+  },
+  {
+    "title": "Content Recommendations",
+    "bubbles": [
+      "Personalized academic suggestions",
+      "Discover relevant resources",
+      "Improve your study feed"
+    ]
+  }
+]

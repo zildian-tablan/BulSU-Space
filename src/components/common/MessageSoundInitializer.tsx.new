@@ -1,0 +1,66 @@
+import { useEffect, useRef } from 'react';
+import { useNotificationContext } from '../../contexts/NotificationContext';
+import { registerMessageSoundPlayer, playMessageNotificationSound } from '../../services/messageService';
+
+/**
+ * Component to register the message sound player with the message service
+ * This ensures immediate message sound feedback without waiting for notifications
+ */
+const MessageSoundInitializer: React.FC = () => {
+  const { playMessageNotification } = useNotificationContext();
+  const initRef = useRef<boolean>(false);
+  
+  // Use an effect to register the message sound player once
+  useEffect(() => {
+    if (initRef.current) return; // Only register once
+    
+    // Define a failsafe sound player that always works
+    const soundPlayer = () => {
+      console.log('🔊 Failsafe message sound player called');
+      
+      try {
+        // First attempt: use notification context's player
+        playMessageNotification();
+        console.log('✅ Used notification context sound player');
+      } catch (e) {
+        console.error('❌ Failed to play via notification context:', e);
+        
+        // Emergency fallback - create an audio element and play it
+        try {
+          const audio = new Audio();
+          audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tAwAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAAElgC1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAABJa/PG7aAAAAAAAAAAAAAAAAAAAA';
+          audio.volume = 0.5;
+          audio.play().catch(err => console.error('Audio fallback failed:', err));
+          console.log('🔊 Used emergency audio element fallback');
+        } catch (audioErr) {
+          console.error('💥 All sound methods failed:', audioErr);
+        }
+      }
+    };
+    
+    // Register the message sound player with the message service
+    registerMessageSoundPlayer(soundPlayer);
+    console.log('🚀 Message sound player REGISTERED with messageService');
+    
+    // Test the sound system to ensure it works and initialize audio context
+    setTimeout(() => {
+      try {
+        console.log('🔊 Testing message notification sound...');
+        playMessageNotificationSound(true); // force=true bypasses throttling
+      } catch (e) {
+        console.error('Error testing message sound:', e);
+      }
+    }, 3000); // 3 seconds after component mounts
+    
+    initRef.current = true;
+  }, [playMessageNotification]);
+
+  return (
+    // Add a hidden div for better component tracking in React DevTools
+    <div style={{ display: 'none' }} data-testid="message-sound-initializer">
+      Message Sound Initializer
+    </div>
+  );
+};
+
+export default MessageSoundInitializer;

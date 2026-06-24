@@ -1,0 +1,18 @@
+{
+  "rule": [
+    {
+      "action": { "type": "Delete" },
+      "condition": {
+        "age": 30,
+        "matchesPrefix": [
+          "tmp/",
+          "temp/",
+          "debug-uploads/",
+          "backups/",
+          "cache/"
+        ],
+        "isLive": true
+      }
+    }
+  ]
+}

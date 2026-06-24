@@ -1,0 +1,361 @@
+/* Responsive styles for MessagingPage mobile view */
+
+/* Animation for sliding up the action sheet */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --mobile-header-height: 64px;
+    --mobile-input-height: 72px;
+  /* Slightly reduce reserved height for search to tighten gap above filters */
+  --mobile-search-height: 54px;
+  --vh: 1vh; /* Will be set by JavaScript */
+  /* Keep search container compact so its background doesn't include filters */
+  }
+
+  /* Main mobile panel - simplified viewport handling */
+  .messaging-mobile-panel {
+    width: 100vw !important;
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    left: 0 !important;
+    right: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    height: calc(var(--vh, 1vh) * 100) !important;
+    max-height: calc(var(--vh, 1vh) * 100) !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #0a0a0a !important;
+    background-image: 
+      linear-gradient(to bottom, rgba(10, 10, 10, 0.97), rgba(15, 15, 15, 0.98), rgba(10, 10, 10, 0.97)),
+      linear-gradient(120deg, rgba(34, 197, 94, 0.03) 0%, transparent 40%),
+      linear-gradient(240deg, rgba(16, 185, 129, 0.03) 0%, transparent 40%) !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden !important;
+    position: fixed !important;
+    top: 0 !important;
+    z-index: 50 !important;
+    transition: height 0.2s ease-out;
+  }
+
+  /* Mobile header */
+  .messaging-mobile-header {
+    flex-shrink: 0;
+    padding: 1rem 1rem 0.75rem 1rem;
+    background: linear-gradient(to right, #0a0a0a, #111111, #0a0a0a);
+    border-bottom: 1px solid rgba(75, 85, 99, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 10;
+    height: var(--mobile-header-height);
+    min-height: var(--mobile-header-height);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Search bar */
+  .messaging-mobile-search {
+    margin: 0.75rem 1rem 0 1rem;
+    width: calc(100vw - 2rem);
+    min-width: 0;
+    flex-shrink: 0;
+    height: var(--mobile-search-height);
+    position: relative;
+  }
+
+  /* Remove green backdrop on search focus: disable pseudo-element */
+  .messaging-mobile-search::after {
+    content: none !important;
+  }
+
+  .messaging-mobile-search:focus-within::after {
+    content: none !important;
+  }
+
+  /* Chat list */
+  .messaging-mobile-list {
+    flex: 1 1 0;
+    overflow-y: auto;
+    padding: 0 0.75rem 0.75rem 0.75rem;
+    background: transparent;
+    height: calc(calc(var(--vh, 1vh) * 100) - var(--mobile-header-height) - var(--mobile-search-height)) !important;
+    max-height: calc(calc(var(--vh, 1vh) * 100) - var(--mobile-header-height) - var(--mobile-search-height)) !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    transition: height 0.2s ease-out;
+    /* Disable text and icon selection */
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+  }
+
+  /* Disable text and icon selection for all elements within the mobile chat list */
+  .messaging-mobile-list * {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  /* Disable text and icon selection for mobile chat list items specifically */
+  .messaging-mobile-list-item {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  /* Disable text and icon selection for chat meta information */
+  .messaging-mobile-list .chat-meta,
+  .messaging-mobile-list .chat-meta *,
+  .messaging-mobile-list .name,
+  .messaging-mobile-list .timestamp,
+  .messaging-mobile-list .last-message,
+  .messaging-mobile-list .avatar,
+  .messaging-mobile-list .unread-badge {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  /* Messages container - fully responsive */
+  .messages-container {
+    height: calc(calc(var(--vh, 1vh) * 100) - var(--mobile-header-height)) !important;
+    max-height: calc(calc(var(--vh, 1vh) * 100) - var(--mobile-header-height)) !important;
+    padding-bottom: var(--mobile-input-height) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    position: relative !important;
+    
+    width: 100vw;
+    max-width: 100vw;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+    scroll-behavior: smooth;
+    scroll-padding-bottom: var(--mobile-input-height);
+    /* Remove smooth scroll for instant jump to bottom */
+    scroll-behavior: auto !important;
+  }
+
+  /* Body styles */
+  body.messaging-page {
+    overflow: hidden !important;
+    position: fixed !important;
+    width: 100% !important;
+    height: calc(var(--vh, 1vh) * 100) !important;
+    touch-action: none !important;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Message input wrapper - fixed positioning */
+  .message-input-wrapper {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(18, 18, 18, 0.95) !important;
+    border-top: 1px solid rgba(31, 41, 55, 0.1) !important;
+    border-top-left-radius: 16px !important;
+    border-top-right-radius: 16px !important;
+    box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.3) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    
+    padding: 0.75rem 1rem !important;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .message-input-wrapper form {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Input field */
+  .message-input-wrapper textarea {
+    flex: 1 !important;
+    min-height: 40px !important;
+    max-height: 90px !important;
+    padding: 0.75rem !important;
+    border-radius: 0.75rem !important;
+    border: 1px solid rgba(75, 85, 99, 0.3) !important;
+    background: rgba(31, 41, 55, 0.5) !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    resize: none !important;
+    outline: none !important;
+    transition: border-color 0.2s ease, background-color 0.2s ease !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+  }
+
+  .message-input-wrapper textarea:focus {
+    border-color: rgba(34, 197, 94, 0.5) !important;
+    background: rgba(31, 41, 55, 0.7) !important;
+    font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+
+  /* Buttons */
+  .message-input-wrapper button {
+    flex-shrink: 0 !important;
+    min-width: 40px !important;
+    width: 40px !important;
+    height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    border: none !important;
+    background: rgba(34, 197, 94, 0.1) !important;
+    color: #22c55e !important;
+    transition: all 0.2s ease !important;
+    -webkit-tap-highlight-color: transparent !important;
+    touch-action: manipulation !important;
+  }
+
+  .message-input-wrapper button:hover {
+    background: rgba(34, 197, 94, 0.2) !important;
+    transform: scale(1.05) !important;
+  }
+
+  .message-input-wrapper button:active {
+    background: rgba(34, 197, 94, 0.3) !important;
+    transform: scale(0.95) !important;
+  }
+
+    .message-input-wrapper button[type="submit"] {
+    background: rgba(34, 197, 94, 0.2) !important;
+  }
+
+  .message-input-wrapper button[type="submit"]:not(:disabled):hover {
+    background: rgba(34, 197, 94, 0.3) !important;
+  }
+
+  .message-input-wrapper button[type="submit"]:not(:disabled):active {
+    background: rgba(34, 197, 94, 0.4) !important;
+  }
+
+  /* Keyboard open state */
+  body.keyboard-open .messaging-mobile-panel {
+    height: calc(var(--vh, 1vh) * 100) !important;
+    max-height: calc(var(--vh, 1vh) * 100) !important;
+  }
+
+  body.keyboard-open .messages-container {
+    height: calc(calc(var(--vh, 1vh) * 100) - var(--mobile-header-height)) !important;
+    max-height: calc(calc(var(--vh, 1vh) * 100) - var(--mobile-header-height)) !important;
+  }
+
+  body.keyboard-open .message-input-wrapper {
+    transform: translateY(0) !important;
+  }
+
+  /* Prevent body scroll when keyboard is open */
+    body.keyboard-open {
+    overflow: hidden !important;
+    position: fixed !important;
+    width: 100% !important;
+    height: calc(var(--vh, 1vh) * 100) !important;
+  }
+
+  /* Disable transitions during keyboard transitions to prevent jumping */
+  .messages-container.keyboard-transitioning {
+    transition: none !important;
+  }
+
+  
+
+  /* Additional responsive adjustments */
+@media (max-width: 450px) {
+  .messaging-mobile-header {
+    padding: 0.75rem 0.75rem 0.5rem 0.75rem;
+  }
+  
+  .messaging-mobile-search {
+    margin: 0.5rem 0.75rem 0 0.75rem;
+    width: calc(100vw - 1.5rem);
+  }
+  
+    .message-input-wrapper {
+      padding: 0.5rem 0.75rem !important;
+    }
+  }
+
+@media (max-width: 400px) {
+  .messaging-mobile-header {
+      height: 56px;
+      min-height: 56px;
+    }
+
+    .message-input-wrapper textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Ensure smooth scrolling */
+  .messages-container {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Optimize for mobile performance */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .message-input-wrapper,
+  .messages-container,
+  .chat-list {
+    will-change: transform;
+  }
+
+  /* Pre-load input field styles to prevent layout shifts */
+  .message-input-wrapper {
+    transform: translateZ(0) !important; /* Force hardware acceleration */
+    backface-visibility: hidden !important;
+    perspective: 1000px !important;
+  }
+
+  /* Ensure immediate display of input field */
+  .message-input-wrapper textarea {
+    transform: translateZ(0) !important;
+    backface-visibility: hidden !important;
+  }
+
+  /* Optimize button rendering */
+  .message-input-wrapper button {
+    transform: translateZ(0) !important;
+    backface-visibility: hidden !important;
+  }
+}

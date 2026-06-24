@@ -1,0 +1,291 @@
+/* Mobile-specific messaging styles */
+
+/* Ensure proper viewport handling on mobile */
+@media (max-width: 767px) {
+  .messaging-page {
+    height: calc(var(--vh, 1vh) * 100);
+    overflow: hidden;
+  }
+  
+  /* Keyboard open state */
+  .keyboard-open {
+    height: calc(var(--vh, 1vh) * 100);
+  }
+  
+  /* Ensure input stays at bottom when keyboard is open */
+  .keyboard-open .message-input-wrapper {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #121212;
+    border-top: 1px solid rgba(31, 41, 55, 0.1);
+  }
+  
+  /* Prevent body scroll when keyboard is open */
+  .keyboard-open body {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+  
+  /* Ensure messages container scrolls properly */
+  .messages-container {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    height: calc(calc(var(--vh, 1vh) * 100) - 64px); /* Subtract header height */
+    transition: height 0.2s ease-out;
+  }
+  
+  /* Optimize input responsiveness */
+  .message-input-wrapper textarea {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: 0.75rem;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+  }
+  
+  /* Ensure send button works properly on touch devices */
+  .message-input-wrapper button[type="submit"] {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  
+  /* Prevent zoom on input focus */
+  .message-input-wrapper textarea:focus {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+/* Desktop styles */
+@media (min-width: 768px) {
+  .messaging-page {
+    height: calc(100vh - 64px);
+  }
+}
+
+/* Ensure proper scrolling behavior */
+.messages-container {
+  /* Use inline background (set from component) to avoid css-loader resolving public/ paths during build. */
+  /* The component will apply: linear-gradient(rgba(0,0,0,0.18), rgba(0,0,0,0.18)), url(process.env.PUBLIC_URL + '/images/hero-bg.JPG') */
+  background-color: #0b0b0b; /* fallback color */
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Optimize for mobile performance */
+@media (max-width: 767px) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Ensure smooth animations */
+  .message-input-wrapper,
+  .messages-container,
+  .chat-list {
+    will-change: transform;
+  }
+}
+
+/* Utility: disable transitions and animations while we adjust scroll to prevent layout jumps */
+.messages-container.theme-updating,
+.messages-container.suppress-transitions {
+  transition: none !important;
+  scroll-behavior: auto !important; /* we control scrolling via JS */
+  -webkit-transition: none !important;
+  transform: none !important;
+  -webkit-transform: none !important;
+}
+
+/* Helper to briefly disable pointer events while stabilizing layout (keeps UX responsive) */
+.messages-container.layout-stabilizing {
+  pointer-events: none;
+}
+
+.message-reaction-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.2s;
+}
+.message-reaction-circle .material-icons {
+  font-size: 18px;
+  line-height: 1;
+}
+.message-reaction-circle .reaction-count {
+  margin-left: 2px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+/* Desktop reaction picker enhancements */
+@media (min-width: 768px) {
+  .desktop-reaction-picker {
+    gap: 0.5rem; /* slightly more breathing room */
+    padding: 0.375rem;
+    border-radius: 12px; /* more rounded */
+    transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    will-change: transform, box-shadow;
+  }
+
+  /* Emoji wrapper: increase tappable/clickable area */
+  .reaction-emoji-wrapper {
+    width: 26px;
+    height: 26px;
+    transition: transform 0.16s ease, box-shadow 0.18s ease;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Slightly larger emoji images on desktop */
+  .reaction-emoji {
+    width: 18px;
+    height: 18px;
+    transition: transform 0.16s ease;
+  }
+
+  /* Hover/focus affordances */
+  .desktop-reaction-picker button:hover .reaction-emoji-wrapper,
+  .desktop-reaction-picker button:focus .reaction-emoji-wrapper {
+    transform: translateY(-3px) scale(1.06);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45), 0 0 8px rgba(34,197,94,0.08);
+  }
+
+  .desktop-reaction-picker button:hover .reaction-emoji,
+  .desktop-reaction-picker button:focus .reaction-emoji {
+    transform: scale(1.06);
+  }
+
+  /* Selected state: stronger outline and subtle glow */
+  .reaction-selected {
+    box-shadow: 0 6px 16px rgba(34,197,94,0.16), inset 0 0 0 2px rgba(34,197,94,0.06);
+  }
+
+  /* Make the 3-dots control a bit larger on desktop */
+  .desktop-reaction-picker .material-icons.text-xs {
+    font-size: 16px;
+  }
+}
+
+/* Pop-up animation and modern glass background */
+@keyframes popupScale {
+  0% { transform: translateY(-6px) scale(0.92); opacity: 0; }
+  60% { transform: translateY(-2px) scale(1.02); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Applied when desktop reaction picker becomes visible */
+.desktop-reaction-show {
+  background: linear-gradient(180deg, rgba(40,41,42,0.72), rgba(24,24,24,0.62));
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  border: 1px solid rgba(255,255,255,0.04);
+  box-shadow: 0 14px 42px rgba(6,10,15,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+  animation: popupScale 180ms cubic-bezier(.2,.9,.2,1);
+  border-radius: 14px; /* extra curvature for modern look */
+  padding: 0.25rem;
+}
+
+/* Menu pop animation */
+.reaction-menu-pop {
+  background: linear-gradient(180deg, rgba(36,36,36,0.94), rgba(18,18,18,0.94));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 18px 52px rgba(3,6,12,0.6);
+  border: 1px solid rgba(255,255,255,0.045);
+  transform-origin: top center;
+  /* Match the reaction picker's popup timing and easing for a cohesive feel */
+  animation: popupScale 180ms cubic-bezier(.2,.9,.2,1);
+  animation-fill-mode: both;
+  border-radius: 14px;
+  padding: 6px 8px;
+}
+
+/* Slightly increase contrast on hover for desktop */
+@media (min-width: 768px) {
+  .desktop-reaction-picker button:hover .reaction-emoji-wrapper {
+    box-shadow: 0 10px 28px rgba(0,0,0,0.5), 0 0 12px rgba(34,197,94,0.06);
+  }
+}
+
+/* Menu option hover/focus effects */
+.menu-option {
+  background: transparent;
+  border-radius: 8px;
+  padding: 6px 8px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-option:hover,
+.menu-option:focus {
+  transform: translateY(-3px) scale(1.03);
+  background: rgba(255,255,255,0.02);
+}
+
+.menu-option:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(34,197,94,0.12), 0 8px 20px rgba(0,0,0,0.45);
+  border-radius: 8px;
+}
+
+.menu-option .menu-icon,
+.menu-option .menu-label {
+  transition: color 120ms ease, transform 140ms ease;
+}
+
+.menu-option:hover .menu-icon,
+.menu-option:focus .menu-icon {
+  color: #fff; /* brighter on hover */
+  transform: translateY(-1px) scale(1.06);
+}
+
+.menu-option:hover .menu-label,
+.menu-option:focus .menu-label {
+  color: #e6e6e6;
+}
+
+/* Stronger selected reaction visuals (override defaults) */
+.reaction-selected {
+  box-shadow: 0 10px 30px rgba(34,197,94,0.16), inset 0 0 0 2px rgba(34,197,94,0.09) !important;
+  background: linear-gradient(180deg, rgba(34,197,94,0.14), rgba(34,197,94,0.06)) !important;
+  border: 1px solid rgba(34,197,94,0.24) !important;
+  transform: translateY(-2px) scale(1.06) !important;
+  transition: transform 160ms cubic-bezier(.2,.9,.2,1), box-shadow 160ms ease, background 160ms ease;
+}
+
+.reaction-selected .reaction-emoji {
+  transform: scale(1.18) !important;
+  filter: drop-shadow(0 8px 16px rgba(34,197,94,0.16));
+}
+
+/* If label is adjacent, make it brighter */
+.reaction-selected + span,
+.reaction-selected ~ span,
+.menu-option .menu-label.selected {
+  color: #a7f3d0 !important; /* brighter mint/green */
+  font-weight: 700;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.35);
+}
+
+/* Reaction capsule popup on message bubble */
+.message-reaction-capsule {
+  transform-origin: bottom center;
+  animation: popupScale 200ms cubic-bezier(.2,.9,.2,1);
+  animation-fill-mode: both;
+  will-change: transform, opacity;
+}
+
+/* Slight lift on hover for interactivity */
+.message-reaction-capsule:hover {
+  transform: translateY(-3px) scale(1.02);
+}

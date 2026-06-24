@@ -1,0 +1,305 @@
+// filepath: c:\Users\ADMIN\Desktop\bs\academic-social-platform 3.1.2\src\services\messageService.ts
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
+  addDoc,
+  getDocs,
+  getDoc,
+  doc,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+  Timestamp,
+  arrayUnion,
+  arrayRemove,
+  writeBatch,
+  documentId,
+  startAfter,
+  QueryDocumentSnapshot,
+  DocumentData,
+  WriteBatch,
+  Transaction,
+  runTransaction,
+  deleteDoc,
+  deleteField
+} from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { User } from '../contexts/AuthContext';
+import { auth } from '../firebase/config';
+
+// Collection names
+const CHATS_COLLECTION = 'chats';
+const MESSAGES_COLLECTION = 'messages';
+const USERS_COLLECTION = 'users';
+
+// Message status
+export type MessageStatus = 'sent' | 'delivered' | 'read';
+
+// Message type
+export type MessageType = 'text' | 'image' | 'file' | 'audio' | 'system';
+
+// Base message interface with required fields
+interface MessageBase {
+  id: string;
+  chatId: string;
+  senderId: string;
+  content: string;
+  type: MessageType;
+  status: MessageStatus;
+  createdAt: Timestamp;
+  readBy: string[];
+  edited: boolean;
+}
+
+// Specific message type interfaces
+interface TextMessage extends MessageBase {
+  type: 'text';
+  attachments: null;
+  replyTo: string | null;
+}
+
+interface MediaMessage extends MessageBase {
+  type: 'image' | 'audio' | 'file';
+  attachments: string[];
+  replyTo: string | null;
+}
+
+interface SystemMessage extends MessageBase {
+  type: 'system';
+  attachments: null;
+  replyTo: null;
+}
+
+// Union type for all message types
+export type Message = TextMessage | MediaMessage | SystemMessage;
+
+// Helper type for creating new messages
+export type NewMessageData = Omit<Message, 'id'> & {
+  replyTo?: string | null;
+};
+
+// Chat interface
+export interface Chat {
+  id: string;
+  participants: string[];
+  lastMessage: {
+    messageId: string;
+    content: string;
+    senderId: string;
+    createdAt: Timestamp;
+    type: MessageType;
+    status: MessageStatus;
+    readBy: string[];
+  } | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  unreadCount: Record<string, number>;
+  theme: string | null;
+  name: string | null;
+  isGroupChat: boolean;
+  adminId?: string; // userId of group admin
+  iconUrl?: string; // group icon url
+  archived?: Record<string, boolean>; // Maps userId to archive status
+}
+
+// Chat with user details interface
+export interface ChatWithDetails extends Chat {
+  otherUser?: User; // The other user in a 1:1 chat
+  users?: User[];   // All users in a group chat
+}
+
+// Pagination interface
+export interface MessagePage {
+  messages: Message[];
+  hasMore: boolean;
+  lastMessageId: string | null;
+}
+
+// Message queue interface
+interface MessageQueue {
+  id: string;
+  message: NewMessageData;
+  attempts: number;
+  lastAttempt: number;
+}
+
+// Message queue storage
+let messageQueue: MessageQueue[] = [];
+const MAX_RETRY_ATTEMPTS = 3;
+const RETRY_DELAY = 5000; // 5 seconds
+
+// Read receipt batch processor
+interface ReadReceiptBatch {
+  chatId: string;
+  userId: string;
+  messageIds: Set<string>;
+  lastUpdate: number;
+}
+
+const READ_RECEIPT_BATCH_DELAY = 2000; // 2 seconds
+const readReceiptBatches = new Map<string, ReadReceiptBatch>();
+
+/**
+ * Helper to generate a unique group icon (e.g. using DiceBear avatars)
+ */
+function generateGroupIconUrl(groupName: string): string {
+  // You can use any avatar service or a local default
+  // Example: DiceBear Avatars API
+  return `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(groupName)}&backgroundColor=green,blue,gray`;
+}
+
+/**
+ * Create a new chat between users
+ */
+export const createChat = async (
+  userIds: string[],
+  isGroupChat: boolean = false,
+  name?: string,
+  adminId?: string
+): Promise<Chat> => {
+  try {
+    // Check if a chat already exists between these users (for 1:1 chats)
+    if (!isGroupChat && userIds.length === 2) {
+      const existingChat = await findChatBetweenUsers(userIds[0], userIds[1]);
+      if (existingChat) {
+        return existingChat;
+      }
+    }
+
+    // Enforce group member limit
+    if (isGroupChat && userIds.length > 70) {
+      throw new Error('Group chat cannot have more than 70 members');
+    }
+
+    // Create new chat
+    const chatData: Omit<Chat, 'id'> = {
+      participants: userIds,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+      isGroupChat: isGroupChat,
+      unreadCount: Object.fromEntries(userIds.map(id => [id, 0])),
+      lastMessage: null,
+      theme: null,
+      name: name || null,
+      // Only include adminId and iconUrl if group chat
+      ...(isGroupChat ? { adminId: adminId || userIds[0] } : {}),
+      ...(isGroupChat ? { iconUrl: generateGroupIconUrl(name || `Group-${Date.now()}`) } : {})
+    };
+
+    const chatRef = await addDoc(collection(db, CHATS_COLLECTION), chatData);
+    return {
+      id: chatRef.id,
+      ...chatData
+    };
+  } catch (error) {
+    console.error('Error creating chat:', error);
+    throw error;
+  }
+};
+
+/**
+ * Archive a chat for a specific user
+ */
+export const archiveChat = async (chatId: string, userId: string): Promise<void> => {
+  try {
+    const chatRef = doc(db, CHATS_COLLECTION, chatId);
+    
+    // Get the current chat document
+    const chatDoc = await getDoc(chatRef);
+    if (!chatDoc.exists()) {
+      throw new Error('Chat not found');
+    }
+
+    // Update the archived field for this user
+    await updateDoc(chatRef, {
+      [`archived.${userId}`]: true
+    });
+  } catch (error) {
+    console.error('Error archiving chat:', error);
+    throw error;
+  }
+};
+
+/**
+ * Unarchive a chat for a specific user
+ */
+export const unarchiveChat = async (chatId: string, userId: string): Promise<void> => {
+  try {
+    const chatRef = doc(db, CHATS_COLLECTION, chatId);
+    
+    // Get the current chat document
+    const chatDoc = await getDoc(chatRef);
+    if (!chatDoc.exists()) {
+      throw new Error('Chat not found');
+    }
+
+    // Update the archived field for this user
+    await updateDoc(chatRef, {
+      [`archived.${userId}`]: false
+    });
+  } catch (error) {
+    console.error('Error unarchiving chat:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get user chats with enhanced support for archived chats
+ */
+export const getUserChats = (
+  userId: string, 
+  callback: (chats: ChatWithDetails[]) => void,
+  showArchived: boolean = false
+): (() => void) => {
+  if (!userId) {
+    console.error('No user ID provided for fetching chats');
+    callback([]);
+    return () => {};
+  }
+
+  try {
+    const q = query(
+      collection(db, CHATS_COLLECTION),
+      where('participants', 'array-contains', userId),
+      orderBy('updatedAt', 'desc')
+    );
+
+    return onSnapshot(q, async (snapshot) => {
+      const currentChats: ChatWithDetails[] = [];
+      
+      for (const chatDoc of snapshot.docs) {
+        const chatData = chatDoc.data() as Chat;
+        const chatWithId: Chat = {
+          id: chatDoc.id,
+          ...chatData
+        };
+        
+        // Check if the chat is archived for this user
+        const isArchived = chatData.archived?.[userId] === true;
+        
+        // Filter based on archived status - if we're showing archived chats, include only archived ones
+        // If we're showing normal chats, include only non-archived ones
+        if ((showArchived && !isArchived) || (!showArchived && isArchived)) {
+          continue;
+        }
+
+        // Enhance the chat with user details
+        const enhancedChat = await enhanceChatWithUserDetails(chatWithId, userId);
+        currentChats.push(enhancedChat);
+      }
+      
+      callback(currentChats);
+    });
+  } catch (error) {
+    console.error('Error getting chats:', error);
+    callback([]);
+    return () => {};
+  }
+};
+
+// Note: existing function enhanceChatWithUserDetails will be below here in the actual file
+// The rest of the file is unchanged

@@ -1,0 +1,39 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.*
+.DS_Store
+*.log
+firebase-config.js
+package-lock.json
+
+# Security - Never commit these files
+serviceAccountKey.json
+**/serviceAccountKey.json
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+credentials.json
+
+# Debug and test scripts (may contain hardcoded credentials)
+debug-*.js
+test-*.js
+*-test.js
+manual-*.js
+*-fixer.js
+*presence-test*.js
+
+# Firebase Functions secrets
+functions/.env.*
+!functions/.env.example
+
+# Server secrets
+server/.env
+server/.env.*
+!server/.env.example
+
+.vercel

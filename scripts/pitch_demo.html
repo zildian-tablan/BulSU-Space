@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>BulSU Space — Pitch Demo</title>
+    <style>
+      body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; max-width:760px; margin:32px auto; padding:16px; line-height:1.45; color:#0b1220 }
+      .hero { background: linear-gradient(90deg,#f7fbff,#ffffff); border-radius:12px; padding:18px; box-shadow:0 6px 18px rgba(10,20,40,0.04) }
+      label { display:block; font-weight:600; margin-bottom:8px }
+      .row { display:flex; gap:8px; align-items:center }
+      input[type="text"] { flex:1; padding:10px 12px; border:1px solid #d0d7de; border-radius:8px; font-size:14px }
+      button { padding:10px 12px; border-radius:8px; border:1px solid #2b6cb0; background:#2b6cb0; color:white; cursor:pointer }
+      button.secondary { background:#eef2ff; color:#0b1220; border:1px solid #c7d2fe }
+      img.qr { width:120px; height:120px; border-radius:8px; border:1px solid #e6eef8 }
+      pre.script { background:#0f1724; color:#e6eef8; padding:14px; border-radius:8px; overflow:auto }
+      small { color:#475569 }
+    </style>
+  </head>
+  <body>
+    <div class="hero">
+      <h1>BulSU Space — Capstone Demo</h1>
+      <p style="margin-top:4px">A quick interactive page to share the live demo link with your panel and audience.</p>
+
+      <div style="margin-top:16px">
+        <label for="demoLink">Demo link (click or copy)</label>
+        <div class="row">
+          <input id="demoLink" type="text" value="https://bulsuspace.web.app/" aria-label="Demo link" />
+          <button id="copyBtn">Copy</button>
+          <button id="openBtn" class="secondary">Open</button>
+        </div>
+        <small>Tip: Click <strong>Open</strong> to open in a new tab, or click <strong>Copy</strong> to copy the link and paste into any browser.</small>
+      </div>
+
+      <div style="margin-top:18px; display:flex; align-items:center; gap:16px">
+        <div>
+          <label>Scan QR</label>
+          <img class="qr" id="qr" alt="QR code linking to demo" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https%3A%2F%2Fbulsuspace.web.app%2F" />
+        </div>
+        <div>
+          <label>Presenter script</label>
+          <pre class="script" id="scriptText">Imagine a campus where study groups form as easily as sending a message.
+BulSU Space transforms how BulSU Hagonoy students, faculty, and alumni connect — creating subject-specific groups, virtual study rooms, a resource library, and an event calendar all in one place.
+
+In this demo you'll see how fast it is to join a study group, find peer resources, and schedule or discover campus events. For the panel: open the link below or copy it into your browser to try the site yourself.
+
+Visit the demo: use the text field above to copy the link, click Open to launch the demo in a new tab, or scan the QR code to open it on your phone.
+
+That's BulSU Space — building community, collaboration, and learning in one familiar place.
+          </pre>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const input = document.getElementById('demoLink');
+      const copyBtn = document.getElementById('copyBtn');
+      const openBtn = document.getElementById('openBtn');
+
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(input.value);
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => (copyBtn.textContent = 'Copy'), 1500);
+        } catch (err) {
+          input.select();
+          document.execCommand('copy');
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => (copyBtn.textContent = 'Copy'), 1500);
+        }
+      });
+
+      openBtn.addEventListener('click', () => {
+        const url = input.value;
+        try { window.open(url, '_blank'); } catch (e) { location.href = url; }
+      });
+
+      // Make it easy to select on click
+      input.addEventListener('focus', () => input.select());
+    </script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "rules": {
+    "status": {
+      "$uid": {
+        ".read": true,
+        ".write": "$uid === auth.uid || auth != null"
+      }
+    },
+    "connections": {
+      "$uid": {
+        ".read": true,
+        ".write": "$uid === auth.uid || auth != null"
+      }
+    },
+    ".read": "auth != null",
+    ".write": "auth != null",
+    ".info": {
+      ".read": true,
+      ".write": false
+    }
+  }
+}

@@ -1,0 +1,133 @@
+/* Simplified animations and removed complex gradients */
+.heart-animate {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-heart {
+  animation: heart-bounce 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes heart-bounce {
+  0% {
+    transform: scale(1);
+  }
+  20% {
+    transform: scale(1.2);
+  }
+  40% {
+    transform: scale(0.95);
+  }
+  60% {
+    transform: scale(1.1);
+  }
+  80% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Simplified modal animations */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0px);
+  }
+}
+
+@keyframes fadeOutScale {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0px);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.98) translateY(10px);
+  }
+}
+
+.animate-fadeInScale {
+  animation: fadeInScale 0.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-fadeOutScale {
+  animation: fadeOutScale 0.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Minimal scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.7);
+}
+
+/* Clean focus states */
+button:focus-visible {
+  outline: 2px solid rgba(34, 197, 94, 0.5);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for interactive elements */
+button,
+
+/* Twitter-style comment input */
+.twitter-comment-input {
+  background: #181c20;
+  border: 1px solid #38444d;
+  border-radius: 9999px;
+  color: #d9d9d9;
+  font-size: 1rem;
+  padding: 0.5rem 1rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+.twitter-comment-input:focus {
+  border-color: #1da1f2;
+  background: #22272b;
+  outline: none;
+}
+
+.twitter-comment-btn {
+  background: #1da1f2;
+  color: #fff;
+  border-radius: 9999px;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.04);
+}
+.twitter-comment-btn:hover:not(:disabled) {
+  background: #1a8cd8;
+}
+.twitter-comment-btn:disabled {
+  background: #38444d;
+  color: #b0b0b0;
+  cursor: not-allowed;
+}
+
+/* Grid layout utilities for media */
+.aspect-square {
+  aspect-ratio: 1 / 1;
+}
+
+.aspect-video {
+  aspect-ratio: 16 / 9;
+}

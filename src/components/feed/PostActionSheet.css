@@ -1,0 +1,79 @@
+/* Add animation for mobile PostActionSheet */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.action-sheet-content {
+  transform-origin: bottom center;
+  backface-visibility: hidden; /* Prevent flickering */
+}
+
+/* Backdrop fade animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.post-action-sheet-container {
+  animation: fade-in 0.2s ease-out forwards;
+}
+
+/* Ensure action sheet appears on top of everything */
+.post-action-sheet-container {
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  z-index: 999999 !important; /* Super high z-index */
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-end !important;
+  pointer-events: auto !important;
+}
+
+/* Sheet content container */
+.action-sheet-content {
+  position: relative !important;
+  width: 100% !important;
+  max-height: 85vh !important; /* Limit height */
+  margin-top: auto !important; /* Push to bottom */
+  overflow-y: auto !important;
+  bottom: 0 !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3) !important; /* Shadow at the top */
+}
+
+/* Desktop dropdown menu styling */
+.post-action-dropdown {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(75, 85, 99, 0.3) !important; 
+  border-radius: 0.5rem !important;
+  transform: translateY(0) !important;
+  min-width: 12rem !important;
+  z-index: 9999 !important;
+  position: absolute !important;
+  background-color: rgba(31, 41, 55, 0.95) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+/* Desktop dropdown menu options - transparent by default */
+.post-action-dropdown button {
+  background-color: transparent !important;
+  transition: background-color 0.2s ease !important;
+}
+
+/* Improve button hover states */
+.action-sheet-button:hover {
+  background-color: rgba(55, 65, 81, 0.3) !important;
+}

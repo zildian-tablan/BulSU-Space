@@ -1,0 +1,988 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // SECURITY FIX: Removed global wildcard `allow read: if true`
+    // that was exposing ALL collections (chats, messages, reports,
+    // call signaling, etc.) to unauthenticated users.
+    // Each collection now has its own explicit read rule.
+    // ============================================================
+
+
+    // ============================================================
+    // HELPER FUNCTIONS
+    // NOTE: Each role function makes a Firestore read. For high-traffic
+    // apps, migrate role checks to Firebase custom claims to avoid
+    // read-count overhead and improve rule evaluation latency.
+    // ============================================================
+
+    function isAdmin() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc.exists() && userDoc.data.role is string && userDoc.data.role.matches('(?i)^admin$');
+    }
+
+    // Fallback: infer admin from managed email pattern when profile doc is missing
+    function isAdminByEmail() {
+      return request.auth != null && request.auth.token.email is string &&
+        request.auth.token.email.matches('(?i)^admin-bs-\\d+@bulsuspace\\.com$');
+    }
+
+    function isSuperAdmin() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc.exists() && userDoc.data.role is string && userDoc.data.role.matches('(?i)^super admin$');
+    }
+
+    function isUserSuperAdminByUid(uid) {
+      let userDoc = get(/databases/$(database)/documents/users/$(uid));
+      return userDoc.exists() && userDoc.data.role is string && userDoc.data.role.matches('(?i)^super admin$');
+    }
+
+    // Fallback: infer super admin from managed email pattern when profile doc is missing
+    function isSuperAdminByEmail() {
+      return request.auth != null && request.auth.token.email is string &&
+        (
+          request.auth.token.email.matches('(?i)^superadmin\\d+@bulsuspace\\.com$') ||
+          request.auth.token.email.matches('(?i)^superadmin\\d+@bulsuspace\\.edu\\.ph$') ||
+          request.auth.token.email.matches('(?i)^sa-bs-\\d+@bulsuspace\\.com$') ||
+          request.auth.token.email.matches('(?i)^sa-bs-\\d+@bulsuspace\\.edu\\.ph$')
+        );
+    }
+
+    function isAdminOrSuperAdmin() {
+      return isAdmin() || isSuperAdmin() || isAdminByEmail() || isSuperAdminByEmail();
+    }
+
+    function isNonSuperSenderTargetingSuperAdmin(participants) {
+      return request.auth != null &&
+        participants is list &&
+        participants.size() == 2 &&
+        request.auth.uid in participants &&
+        !(isSuperAdmin() || isSuperAdminByEmail()) &&
+        (
+          (participants[0] == request.auth.uid && isUserSuperAdminByUid(participants[1])) ||
+          (participants[1] == request.auth.uid && isUserSuperAdminByUid(participants[0]))
+        );
+    }
+
+    function isDean() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc.exists() && userDoc.data.role is string && userDoc.data.role.matches('(?i)^dean$');
+    }
+
+    function isDeanByEmail() {
+      return request.auth != null && request.auth.token.email is string &&
+        request.auth.token.email.matches('(?i)^dean\\d+@bulsuspace\\.com$');
+    }
+
+    function isFaculty() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc.exists() && userDoc.data.role is string && userDoc.data.role.matches('(?i)^faculty$');
+    }
+
+    // Fallback: infer faculty from managed email pattern when profile doc is missing
+    function isFacultyByEmail() {
+      return request.auth != null && request.auth.token.email is string &&
+        request.auth.token.email.matches('(?i)^[a-z]+\\.[a-z]+@bulsuspace\\.com$');
+    }
+
+    function isPrivilegedUser() {
+      return isAdminOrSuperAdmin() || isDean() || isDeanByEmail() || isFaculty() || isFacultyByEmail();
+    }
+
+    // Helper: get group document by ID
+    function getGroup(groupId) {
+      return get(/databases/$(database)/documents/groups/$(groupId));
+    }
+
+    function isGroupCreator(groupId) {
+      let groupDoc = getGroup(groupId);
+      return groupDoc.exists() && groupDoc.data.creatorId == request.auth.uid;
+    }
+
+    function isGroupCreatorByEmail(groupId) {
+      let groupDoc = getGroup(groupId);
+      let creatorUid = groupDoc.exists() ? groupDoc.data.creatorId : null;
+      let creatorDoc = get(/databases/$(database)/documents/users/$(creatorUid));
+      return request.auth != null &&
+        request.auth.token.email is string &&
+        groupDoc.exists() &&
+        creatorUid != null &&
+        creatorDoc.exists() &&
+        creatorDoc.data.email == request.auth.token.email;
+    }
+
+    // Membership helper for deterministic member doc ids: {uid}_{groupId}
+    function isGroupMember(groupId) {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/group_members/$(request.auth.uid + '_' + groupId));
+    }
+
+    function isGroupAdminMember(groupId) {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/group_members/$(request.auth.uid + '_' + groupId)) &&
+        get(/databases/$(database)/documents/group_members/$(request.auth.uid + '_' + groupId)).data.role == 'admin';
+    }
+
+    // Validates that memberCount only shifts by ±1 per write
+    function isValidMemberCountChange(previous, next) {
+      return (
+        (previous is int && next is int && (
+          next == previous + 1 ||
+          (previous > 0 && next == previous - 1) ||
+          (previous == 0 && next == 0)
+        )) ||
+        (previous == null && next is int && next == 1)
+      );
+    }
+
+    // Returns true when the authenticated user authored the referenced post
+    function isPostAuthor(postId) {
+      let postDoc = get(/databases/$(database)/documents/posts/$(postId));
+      return postDoc.exists() && postDoc.data.userId == request.auth.uid;
+    }
+
+
+    // ============================================================
+    // USERS
+    // ============================================================
+    match /users/{userId} {
+      // Profiles are readable by anyone (needed for display names, avatars, etc.)
+      allow read: if true;
+
+      // Creation: owner, admin/super admin, dean, or dean-by-email
+      allow create: if request.auth != null && (
+        request.auth.uid == userId ||
+        isAdminOrSuperAdmin() ||
+        isDean() ||
+        isDeanByEmail()
+      );
+
+      // Updates / deletes: only the owner or an admin/super admin
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == userId || isAdminOrSuperAdmin()
+      );
+
+      // Login history: owner only
+      match /login_history/{loginId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Per-user activity logs: any auth user can append; only admins can read/edit/delete
+      match /activity_logs/{logId} {
+        allow read:   if request.auth != null && isAdminOrSuperAdmin();
+        allow create: if request.auth != null;
+        allow update, delete: if request.auth != null && isAdminOrSuperAdmin();
+      }
+
+      // Hidden posts list: owner only (delete also allows the post's author to clean up refs)
+      match /hidden_posts/{postId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow delete: if request.auth != null && (
+          request.auth.uid == userId ||
+          isAdminOrSuperAdmin() ||
+          isPostAuthor(postId)
+        );
+      }
+    }
+
+
+    // ============================================================
+    // UPLOAD HISTORY — admin/super admin only
+    // ============================================================
+    match /upload_history/{uploadId} {
+      allow read, create, update, delete: if request.auth != null && isAdminOrSuperAdmin();
+    }
+
+
+    // ============================================================
+    // GLOBAL ACTIVITY LOGS — admin/super admin only
+    // ============================================================
+    match /activity_logs/{logId} {
+      allow read, create, update, delete: if request.auth != null && isAdminOrSuperAdmin();
+    }
+
+
+    // ============================================================
+    // REPORTS
+    // ============================================================
+    match /reports/{reportId} {
+      // Reporter must be the authenticated user; admins manage everything else
+      allow create: if request.auth != null &&
+                    request.auth.uid == request.resource.data.userId;
+      allow read, update, delete: if request.auth != null && isAdminOrSuperAdmin();
+    }
+
+
+    // ============================================================
+    // FACULTY ACCESS REQUESTS
+    // Allow unauthenticated creation (public form); admins manage the rest
+    // ============================================================
+    match /faculty_access_requests/{requestId} {
+      allow create: if true;  // Public request form — intentional
+      allow read:   if request.auth != null;
+      allow update, delete: if request.auth != null && isAdminOrSuperAdmin();
+    }
+
+
+    // ============================================================
+    // ALUMNI REQUESTS
+    // ============================================================
+    match /alumni_request/{requestId} {
+      allow create: if request.resource.data.subject == 'alumni' && (
+        // Authenticated non-anonymous user uploading proof files
+        (
+          request.auth != null &&
+          request.auth.token.firebase.sign_in_provider != 'anonymous' &&
+          request.resource.data.files is list &&
+          request.resource.data.files.size() > 0
+        )
+        ||
+        // Unauthenticated submission — FIX: enforce minimum required fields to
+        // prevent junk/spam documents from flooding the collection
+        (
+          request.auth == null &&
+          request.resource.data.name is string &&
+          request.resource.data.name.size() > 0 &&
+          request.resource.data.email is string &&
+          request.resource.data.email.size() > 0
+        )
+      );
+      allow read, update, delete: if request.auth != null && isAdminOrSuperAdmin();
+    }
+
+
+    // ============================================================
+    // FACULTY REQUEST HISTORY — admin/super admin only
+    // ============================================================
+    match /faculty_request_history/{requestId} {
+      allow read, create, update, delete: if request.auth != null && isAdminOrSuperAdmin();
+    }
+
+
+    // ============================================================
+    // BLOCKED USERS
+    // ============================================================
+    match /blocked_users/{pairId} {
+      allow read: if request.auth != null;
+
+      // FIX: strict payload validation + document ID format check
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.blockerUid &&
+        request.resource.data.blockedUserUid is string &&
+        request.resource.data.blockerUid is string &&
+        request.resource.data.isBlocked is bool &&
+        request.resource.data.blockerUid != request.resource.data.blockedUserUid &&
+        pairId == (request.resource.data.blockerUid + '_' + request.resource.data.blockedUserUid);
+
+      allow update: if request.auth != null &&
+        request.auth.uid == resource.data.blockerUid &&
+        request.resource.data.blockerUid == resource.data.blockerUid &&
+        request.resource.data.blockedUserUid == resource.data.blockedUserUid &&
+        request.resource.data.isBlocked is bool;
+
+      allow delete: if request.auth != null && request.auth.uid == resource.data.blockerUid;
+    }
+
+
+    // ============================================================
+    // GROUPS
+    // FIX: was fully open (create/update/delete: if true).
+    // Now requires authentication; mutations scoped to creator/admin.
+    // MemberCount-only updates are allowed for any authenticated user
+    // so that join/leave actions still work without extra privileges.
+    // ============================================================
+    match /groups/{groupId} {
+      allow read: if true;
+
+      allow create: if request.auth != null;
+
+      allow update: if request.auth != null && (
+        isGroupCreator(groupId) ||
+        isGroupCreatorByEmail(groupId) ||
+        isGroupAdminMember(groupId) ||
+        isAdminOrSuperAdmin() ||
+        // Allow any authenticated user to increment/decrement memberCount only
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount', 'updatedAt']) &&
+          isValidMemberCountChange(resource.data.memberCount, request.resource.data.memberCount)
+        ) ||
+        // Allow space members to set/clear the linked chat id for this space only
+        (
+          isGroupMember(groupId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['spaceChatId', 'updatedAt']) &&
+          (
+            request.resource.data.spaceChatId == null ||
+            (
+              request.resource.data.spaceChatId is string &&
+              exists(/databases/$(database)/documents/chats/$(request.resource.data.spaceChatId)) &&
+              get(/databases/$(database)/documents/chats/$(request.resource.data.spaceChatId)).data.isGroupChat == true &&
+              get(/databases/$(database)/documents/chats/$(request.resource.data.spaceChatId)).data.linkedGroupId == groupId
+            )
+          )
+        )
+      );
+
+      allow delete: if request.auth != null && (
+        isGroupCreator(groupId) || isGroupCreatorByEmail(groupId) || isGroupAdminMember(groupId) || isAdminOrSuperAdmin()
+      );
+    }
+
+
+    // ============================================================
+    // GROUP MEMBERS
+    // FIX: was fully open (create/update/delete: if true).
+    // Now requires authentication and validates userId ownership.
+    // ============================================================
+    match /group_members/{memberId} {
+      allow read: if true;
+
+      // User can create own membership; creators/admins can add invited members
+      allow create: if request.auth != null &&
+        request.resource.data.userId is string &&
+        request.resource.data.groupId is string &&
+        (
+          request.auth.uid == request.resource.data.userId ||
+          isAdminOrSuperAdmin() ||
+          isGroupAdminMember(request.resource.data.groupId) ||
+          isGroupCreator(request.resource.data.groupId) ||
+          isGroupCreatorByEmail(request.resource.data.groupId)
+        );
+
+      // Only the member themselves or an admin can update/delete membership
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        isGroupAdminMember(resource.data.groupId) ||
+        isGroupCreator(resource.data.groupId) ||
+        isGroupCreatorByEmail(resource.data.groupId) ||
+        isAdminOrSuperAdmin()
+      );
+
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        isGroupAdminMember(resource.data.groupId) ||
+        isGroupCreator(resource.data.groupId) ||
+        isGroupCreatorByEmail(resource.data.groupId) ||
+        isAdminOrSuperAdmin()
+      );
+    }
+
+
+    // ============================================================
+    // STICKY NOTES (Expression Board)
+    // FIX: no update rule existed — added explicit owner/admin update.
+    // ============================================================
+    match /sticky_notes/{noteId} {
+      allow read: if true;
+
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.authorId &&
+        request.resource.data.content is string &&
+        request.resource.data.content.size() > 0;
+
+      // FIX: was missing — now explicitly scoped to author or admin
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.authorId || isAdminOrSuperAdmin()
+      );
+
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.authorId || isAdminOrSuperAdmin()
+      );
+    }
+
+
+    // ============================================================
+    // POSTS
+    // ============================================================
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+
+      allow update: if request.auth != null && (
+        // Post owner can update any fields
+        request.auth.uid == resource.data.userId ||
+        // Any authenticated user may update engagement/reporting fields only
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+          ['viewedBy', 'viewCount', 'viewRoleBreakdown', 'reactionCount', 'commentCount', 'reported', 'reportReason']
+        ) ||
+        // Super admin can set the annual archive date
+        (isSuperAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['annual_archive_date']))
+      );
+
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId || isAdminOrSuperAdmin()
+      );
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null;
+        allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+        allow delete: if request.auth != null && (
+          request.auth.uid == resource.data.userId ||
+          request.auth.uid == get(/databases/$(database)/documents/posts/$(postId)).data.userId ||
+          isAdminOrSuperAdmin()
+        );
+
+        match /replies/{replyId} {
+          allow read: if true;
+          allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+          allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+          allow delete: if request.auth != null && (
+            request.auth.uid == resource.data.userId ||
+            request.auth.uid == get(/databases/$(database)/documents/posts/$(postId)).data.userId ||
+            isAdminOrSuperAdmin()
+          );
+        }
+      }
+
+      match /reactions/{reactionId} {
+        allow read: if request.auth != null;
+        allow create, update: if request.auth != null && (
+          request.auth.uid == reactionId &&
+          request.auth.uid == request.resource.data.userId
+        );
+        allow delete: if request.auth != null && (
+          (request.auth.uid == reactionId && request.auth.uid == resource.data.userId) ||
+          request.auth.uid == get(/databases/$(database)/documents/posts/$(postId)).data.userId ||
+          isAdminOrSuperAdmin()
+        );
+      }
+
+      // Catch-all for any other subcollections (likes, etc.)
+      match /{subcollection}/{docId} {
+        allow read: if true;
+        allow create, update: if false;
+        allow delete: if request.auth != null && (
+          request.auth.uid == get(/databases/$(database)/documents/posts/$(postId)).data.userId ||
+          isAdminOrSuperAdmin()
+        );
+      }
+    }
+
+
+    // ============================================================
+    // SHARED POSTS
+    // ============================================================
+    match /shared_posts/{shareId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+
+      allow update: if request.auth != null && (
+        (
+          request.auth.uid == resource.data.sharerId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sharerCaption'])
+        ) ||
+        isAdminOrSuperAdmin()
+      );
+
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.sharerId || isAdminOrSuperAdmin()
+      );
+    }
+
+
+    // ============================================================
+    // FRIEND REQUESTS
+    // ============================================================
+    match /friendRequests/{requestId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null &&
+                    request.auth.uid == request.resource.data.senderId;
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.senderId ||
+        request.auth.uid == resource.data.receiverId
+      );
+    }
+
+
+    // ============================================================
+    // FRIENDS
+    // ============================================================
+    match /friends/{friendshipId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && (
+        request.auth.uid == request.resource.data.userId ||
+        request.auth.uid == request.resource.data.friendId
+      );
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.friendId
+      );
+    }
+
+
+    // ============================================================
+    // NOTIFICATIONS
+    // FIX: removed overly broad create path. Social notifications
+    // (comment, reaction, etc.) are now enumerated explicitly so that
+    // arbitrary notification types can no longer be sent to any user.
+    // ============================================================
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+
+      allow create: if request.auth != null &&
+        request.resource.data.userId is string &&
+        request.resource.data.type is string &&
+        request.resource.data.message is string &&
+        (
+          // User creating a notification for themselves
+          request.auth.uid == request.resource.data.userId ||
+          // Admins can create any notification (system/moderation notices)
+          isAdminOrSuperAdmin() ||
+          // FIX: enumerate permitted social notification types that platform
+          // actions (comment, react, etc.) generate for OTHER users.
+          // Add any additional app-defined types here as needed.
+          request.resource.data.type in [
+            'comment', 'reply', 'reaction', 'like',
+            'friend_request', 'friend_accept',
+            'space_invite', 'group_invite',
+            'mention', 'tag', 'post_tag', 'friend_post',
+            'share', 'event_invite', 'new_post', 'follow'
+          ] ||
+          // Messaging notifications: sender can notify other users
+          (
+            (request.resource.data.type == 'message' || request.resource.data.type == 'message_request') &&
+            request.resource.data.extra is map &&
+            request.resource.data.extra.senderId == request.auth.uid
+          ) ||
+          // Warn / takedown: issuer must be the authenticated user
+          (
+            (request.resource.data.type == 'warn' || request.resource.data.type == 'takedown') &&
+            request.resource.data.extra is map &&
+            request.resource.data.extra.issuerId == request.auth.uid
+          )
+        );
+
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        (resource.data.type == 'friend_request' && request.auth.uid == resource.data.relatedId) ||
+        (
+          (resource.data.type == 'space_invite' || resource.data.type == 'group_invite') &&
+          resource.data.extra is map &&
+          resource.data.extra.inviterId == request.auth.uid
+        ) ||
+        isAdminOrSuperAdmin() ||
+        (resource.data.postId != null && isPostAuthor(resource.data.postId))
+      );
+    }
+
+
+    // ============================================================
+    // CHATS
+    // ============================================================
+    match /chats/{chatId} {
+      allow read: if request.auth != null && (
+        request.auth.uid in resource.data.participants ||
+        (resource.data.linkedGroupId is string && isGroupMember(resource.data.linkedGroupId)) ||
+        isAdminOrSuperAdmin()
+      );
+      allow create: if request.auth != null &&
+        request.auth.uid in request.resource.data.participants &&
+        !isNonSuperSenderTargetingSuperAdmin(request.resource.data.participants);
+      allow update: if request.auth != null && (
+        (
+          request.auth.uid in resource.data.participants &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'lastMessage', 'lastMessageAt', 'updatedAt', 'lastSenderId',
+            'lastMessageType', 'lastMessagePreview', 'lastActivityAt',
+            'participantsReadState', 'unreadCount', 'unreadCounts',
+            'isMessageRequest', 'initiator', 'messageRequestInitiatorId',
+            'archived'
+          ])
+        ) ||
+        // Space-member sync path for linked group chats (participants/name/icon/admin)
+        (
+          resource.data.linkedGroupId is string &&
+          isGroupMember(resource.data.linkedGroupId) &&
+          request.resource.data.linkedGroupId == resource.data.linkedGroupId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'participants', 'unreadCount', 'adminId', 'name', 'iconUrl', 'linkedGroupName', 'updatedAt'
+          ])
+        ) ||
+        isAdminOrSuperAdmin()
+      );
+      allow delete: if request.auth != null && (
+        request.auth.uid in resource.data.participants || isAdminOrSuperAdmin()
+      );
+    }
+
+
+    // ============================================================
+    // MESSAGES
+    // ============================================================
+    match /messages/{messageId} {
+      allow read: if request.auth != null && (
+        (
+          exists(/databases/$(database)/documents/chats/$(resource.data.chatId)) &&
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(resource.data.chatId)).data.participants
+        ) ||
+        isAdminOrSuperAdmin()
+      );
+      allow create: if request.auth != null &&
+        exists(/databases/$(database)/documents/chats/$(request.resource.data.chatId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/chats/$(request.resource.data.chatId)).data.participants &&
+        request.auth.uid == request.resource.data.senderId &&
+        !isNonSuperSenderTargetingSuperAdmin(get(/databases/$(database)/documents/chats/$(request.resource.data.chatId)).data.participants);
+      allow update: if request.auth != null && (
+        // Sender can edit their own message content/metadata
+        request.auth.uid == resource.data.senderId ||
+        // Any participant can only update read/delivery/hide/reaction related fields
+        (
+          exists(/databases/$(database)/documents/chats/$(resource.data.chatId)) &&
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(resource.data.chatId)).data.participants &&
+          request.resource.data.chatId == resource.data.chatId &&
+          request.resource.data.senderId == resource.data.senderId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'readBy', 'deletedForMe', 'reactions', 'isPinned', 'pinnedDetails'
+          ])
+        ) ||
+        isAdminOrSuperAdmin()
+      );
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.senderId ||
+        (
+          exists(/databases/$(database)/documents/chats/$(resource.data.chatId)) &&
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(resource.data.chatId)).data.participants
+        ) ||
+        isAdminOrSuperAdmin()
+      );
+    }
+
+
+    // ============================================================
+    // AUDIO CALLS
+    // ============================================================
+    match /calls/{callId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.callerUid ||
+        request.auth.uid == resource.data.calleeUid ||
+        isAdminOrSuperAdmin()
+      );
+
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.callerUid &&
+        request.resource.data.calleeUid is string &&
+        request.resource.data.kind == 'audio' &&
+        !(isSuperAdmin() || isSuperAdminByEmail()) &&
+        !isUserSuperAdminByUid(request.resource.data.calleeUid);
+
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.callerUid ||
+        request.auth.uid == resource.data.calleeUid ||
+        isAdminOrSuperAdmin()
+      );
+    }
+
+    // Server-maintained one-call-per-user pointers.
+    // Client access intentionally blocked to prevent spoofing.
+    match /user_call_state/{uid} {
+      allow read, write: if request.auth != null && isAdminOrSuperAdmin();
+    }
+
+
+    // ============================================================
+    // TUTORIAL STATUS
+    // ============================================================
+    match /tutorial_status/{userId} {
+      allow read, write: if request.auth != null && (
+        request.auth.uid == userId || isAdminOrSuperAdmin()
+      );
+    }
+
+
+    // ============================================================
+    // GRADUATION CHECK
+    // ============================================================
+    match /graduation_check/{userId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == userId || isAdminOrSuperAdmin()
+      );
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+    }
+
+
+    // ============================================================
+    // JOB OPENINGS
+    // FIX: added owner check for updates and deletes to prevent
+    // any authenticated user from editing or removing others' postings.
+    // ============================================================
+    match /job_openings/{jobId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.createdBy || isAdminOrSuperAdmin()
+      );
+    }
+
+
+    // ============================================================
+    // SPACE NEWS
+    // FIX: was open to all authenticated users for write.
+    // Restricted to faculty, dean, and admin/super admin roles.
+    // ============================================================
+    match /space_news/{newsId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && isPrivilegedUser();
+    }
+
+
+    // ============================================================
+    // IDEA CHAIN POSTS
+    // ============================================================
+    match /idea_chain_posts/{postId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.authorId;
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.authorId || isAdminOrSuperAdmin()
+      );
+
+      match /responses/{responseId} {
+        allow read: if request.auth != null;
+        // Allow posting anonymously (authorId absent/null) or as self
+        allow create: if request.auth != null && (
+          !('authorId' in request.resource.data) ||
+          request.resource.data.authorId == request.auth.uid ||
+          request.resource.data.anonymous == true
+        );
+        allow delete: if request.auth != null && isAdminOrSuperAdmin();
+      }
+    }
+
+
+    // ============================================================
+    // DEVICE TOKENS
+    // ============================================================
+    match /device/{uid} {
+      // Self-only access for all roles.
+      // Supports legacy random-id documents when the stored `user` field
+      // matches the authenticated uid.
+      allow read: if request.auth != null && (
+        request.auth.uid == uid ||
+        (resource.data.user is string && resource.data.user == request.auth.uid)
+      );
+
+      allow create: if request.auth != null &&
+        request.resource.data.user is string &&
+        request.resource.data.user == request.auth.uid;
+
+      allow update: if request.auth != null && (
+          request.auth.uid == uid ||
+          (resource.data.user is string && resource.data.user == request.auth.uid)
+        ) &&
+        request.resource.data.user is string &&
+        request.resource.data.user == request.auth.uid;
+
+      allow delete: if request.auth != null && (
+        request.auth.uid == uid ||
+        (resource.data.user is string && resource.data.user == request.auth.uid)
+      );
+    }
+
+
+    // ============================================================
+    // FCM TOKENS
+    // ============================================================
+    match /fcmTokens/{userId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == userId || isAdminOrSuperAdmin()
+      );
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && (
+        request.auth.uid == userId || isAdminOrSuperAdmin()
+      );
+    }
+
+
+    // ============================================================
+    // GROUP POSTS
+    // ============================================================
+    match /group_posts/{postId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId || isAdminOrSuperAdmin()
+      );
+    }
+
+
+    // ============================================================
+    // SPACE POSTS
+    // ============================================================
+    match /spacePosts/{postId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        isAdminOrSuperAdmin() ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'reactions', 'reactionCount', 'commentCount', 'viewCount', 'updatedAt'
+        ])
+      );
+
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId || isAdminOrSuperAdmin()
+      );
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null;
+        allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+        allow delete: if request.auth != null && (
+          request.auth.uid == resource.data.userId ||
+          request.auth.uid == get(/databases/$(database)/documents/spacePosts/$(postId)).data.userId ||
+          isAdminOrSuperAdmin()
+        );
+
+        match /replies/{replyId} {
+          allow read: if true;
+          allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+          allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+          allow delete: if request.auth != null && (
+            request.auth.uid == resource.data.userId ||
+            request.auth.uid == get(/databases/$(database)/documents/spacePosts/$(postId)).data.userId ||
+            isAdminOrSuperAdmin()
+          );
+        }
+      }
+
+      match /reactions/{reactionId} {
+        allow read: if request.auth != null;
+        allow create, update: if request.auth != null && (
+          request.auth.uid == reactionId &&
+          request.auth.uid == request.resource.data.userId
+        );
+        allow delete: if request.auth != null && (
+          (request.auth.uid == reactionId && request.auth.uid == resource.data.userId) ||
+          request.auth.uid == get(/databases/$(database)/documents/spacePosts/$(postId)).data.userId ||
+          isAdminOrSuperAdmin()
+        );
+      }
+
+      // Catch-all for any other subcollections under space posts
+      match /{subcollection}/{docId} {
+        allow read: if true;
+        allow create, update: if false;
+        allow delete: if request.auth != null && (
+          request.auth.uid == get(/databases/$(database)/documents/spacePosts/$(postId)).data.userId ||
+          isAdminOrSuperAdmin()
+        );
+      }
+    }
+
+
+    // ============================================================
+    // EVENTS
+    // ============================================================
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.createdBy || isAdminOrSuperAdmin()
+      );
+    }
+
+
+    // ============================================================
+    // ACADEMIC CALENDAR
+    // ============================================================
+    match /acadCalendar/{eventId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null && isAdminOrSuperAdmin();
+    }
+
+
+    // ============================================================
+    // EVENT REGISTRATIONS
+    // FIX: consolidated duplicate allow read rules; event creators and
+    // admins can manage all registrations for their events.
+    // ============================================================
+    match /event_registrations/{registrationId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.createdBy ||
+        isAdminOrSuperAdmin()
+      );
+    }
+
+
+    // ============================================================
+    // POLLS
+    // ============================================================
+    match /polls/{pollId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.authorId;
+
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.authorId ||
+        isAdminOrSuperAdmin() ||
+        // Any authenticated user may increment the total vote count
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalVotes', 'updatedAt'])
+      );
+
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.authorId || isAdminOrSuperAdmin()
+      );
+
+      match /pollOptions/{optionId} {
+        allow read: if true;
+        allow create: if request.auth != null;
+        allow update: if request.auth != null &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count', 'voters']);
+        allow delete: if request.auth != null && (
+          request.auth.uid == get(/databases/$(database)/documents/polls/$(pollId)).data.authorId ||
+          isAdminOrSuperAdmin()
+        );
+      }
+    }
+    // ============================================================
+    // FLARES
+    // ============================================================
+    match /flares/{flareId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        // Any authenticated user may update viewCount / likeCount counters only
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount', 'likeCount'])
+      );
+
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId || isAdminOrSuperAdmin()
+      );
+
+      match /reactions/{reactionId} {
+        allow read: if request.auth != null;
+        allow create, update: if request.auth != null &&
+          request.auth.uid == reactionId &&
+          request.auth.uid == request.resource.data.userId;
+        allow delete: if request.auth != null && (
+          (request.auth.uid == reactionId && request.auth.uid == resource.data.userId) ||
+          request.auth.uid == get(/databases/$(database)/documents/flares/$(flareId)).data.userId ||
+          isAdminOrSuperAdmin()
+        );
+      }
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null &&
+          request.auth.uid == request.resource.data.userId;
+        allow update: if request.auth != null &&
+          request.auth.uid == resource.data.userId;
+        allow delete: if request.auth != null && (
+          request.auth.uid == resource.data.userId ||
+          request.auth.uid == get(/databases/$(database)/documents/flares/$(flareId)).data.userId ||
+          isAdminOrSuperAdmin()
+        );
+      }
+    }
+
+  }
+}

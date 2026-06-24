@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BulSU Space Deployment Manual</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 10mm;
+      }
+
+      :root {
+        --bg: #f2f5f7;
+        --bg-alt: #e6eaef;
+        --panel: #ffffff;
+        --panel-alt: #f9fbfc;
+        --border: #d8dee5;
+        --shadow: rgba(31, 43, 69, 0.08);
+        --text-dark: #1f2b45;
+        --text-mid: #4c5b72;
+        --text-light: #7e8da8;
+        --accent: #3747ff;
+        --accent-soft: #8592ff;
+        --accent-muted: #9fa8da;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Inter", "Segoe UI", "Helvetica Neue", sans-serif;
+        color: var(--text-mid);
+        background: radial-gradient(circle at top, var(--bg), var(--bg-alt));
+      }
+
+      .manual-shell {
+        max-width: 1100px;
+        margin: 0 auto 48px;
+        padding: 48px 32px 64px;
+      }
+
+      header {
+        text-align: center;
+        padding: 64px 24px 40px;
+        position: relative;
+      }
+
+      header .pill {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 18px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        font-size: 0.85rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-light);
+      }
+
+      header h1 {
+        margin: 24px 0 12px;
+        font-size: clamp(2rem, 4vw, 3.2rem);
+        color: var(--text-dark);
+        letter-spacing: 0.02em;
+      }
+
+      header p {
+        margin: 0 auto;
+        max-width: 720px;
+        line-height: 1.6;
+        color: var(--text-mid);
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 18px;
+        margin-top: 36px;
+      }
+
+      .hero-card {
+        padding: 20px;
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        box-shadow: 0 18px 35px var(--shadow);
+        text-align: left;
+      }
+
+      .hero-card span {
+        display: inline-block;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-light);
+        margin-bottom: 8px;
+      }
+
+      .hero-card h3 {
+        margin: 0 0 10px;
+        font-size: 1.15rem;
+        color: var(--text-dark);
+      }
+
+      .hero-guide {
+        margin-top: 36px;
+        padding: 28px 24px;
+        border-radius: 22px;
+        border: 1px dashed var(--border);
+        background: var(--panel-alt);
+        box-shadow: 0 18px 35px var(--shadow);
+        text-align: left;
+      }
+
+      .hero-guide h3 {
+        margin: 0 0 14px;
+        font-size: 1.2rem;
+        color: var(--text-dark);
+      }
+
+      .hero-guide ol {
+        margin: 0;
+        padding-left: 22px;
+        line-height: 1.6;
+      }
+
+      .hero-guide li {
+        margin-bottom: 10px;
+      }
+
+      .hero-guide li:last-child {
+        margin-bottom: 0;
+      }
+
+      main {
+        background: var(--panel);
+        border-radius: 32px;
+        border: 1px solid var(--border);
+        box-shadow: 0 40px 70px var(--shadow);
+        padding: 56px 56px 48px;
+      }
+
+      section {
+        margin-bottom: 56px;
+      }
+
+      section:last-of-type {
+        margin-bottom: 0;
+      }
+
+      section h2 {
+        margin: 0 0 12px;
+        font-size: 1.6rem;
+        color: var(--text-dark);
+      }
+
+      section > p {
+        margin: 0 0 16px;
+        line-height: 1.6;
+      }
+
+      .tagline {
+        display: inline-block;
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: var(--panel-alt);
+        border: 1px solid var(--border);
+        font-size: 0.85rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-light);
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 18px;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 20px;
+        background: var(--panel-alt);
+        line-height: 1.55;
+      }
+
+      .card strong {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--text-dark);
+      }
+
+      .card ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      .card li {
+        margin-bottom: 6px;
+      }
+
+      .card li:last-child {
+        margin-bottom: 0;
+      }
+
+      .steps {
+        list-style: none;
+        margin: 28px 0 0;
+        padding: 0;
+        border-left: 3px solid var(--border);
+      }
+
+      .steps li {
+        margin: 0;
+        padding: 18px 0 18px 24px;
+        position: relative;
+      }
+
+      .steps li::before {
+        content: attr(data-step);
+        position: absolute;
+        left: -54px;
+        top: 18px;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 2px solid var(--accent);
+        color: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        background: #fff;
+      }
+
+      code {
+        background: #10182810;
+        border-radius: 8px;
+        padding: 2px 6px;
+        font-family: "JetBrains Mono", "Fira Code", monospace;
+        font-size: 0.9rem;
+        color: var(--text-dark);
+      }
+
+      .checklist {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 16px;
+        margin-top: 24px;
+      }
+
+      .check-card {
+        border: 1px dashed var(--border);
+        border-radius: 18px;
+        padding: 18px;
+        position: relative;
+        background: #fff;
+      }
+
+      .check-card h3 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+        color: var(--text-dark);
+      }
+
+      .check-card ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      .timeline {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-top: 24px;
+      }
+
+      .timeline-block {
+        border-radius: 16px;
+        padding: 18px;
+        border: 1px solid var(--border);
+        background: var(--panel-alt);
+      }
+
+      .timeline-block span {
+        font-size: 0.8rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent-muted);
+      }
+
+      .timeline-block strong {
+        display: block;
+        margin: 8px 0;
+        color: var(--text-dark);
+      }
+
+      .faq-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 18px;
+        margin-top: 24px;
+      }
+
+      .faq-card {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 18px;
+        background: #fff;
+      }
+
+      section,
+      header,
+      .hero-grid,
+      .hero-card,
+      .hero-guide,
+      .card,
+      .check-card,
+      .timeline-block,
+      .faq-card,
+      .callout,
+      .resource-table,
+      .two-col > div {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      footer {
+        text-align: center;
+        margin-top: 48px;
+        color: var(--text-light);
+        font-size: 0.85rem;
+      }
+
+      .status-pill {
+        display: inline-block;
+        margin-bottom: 8px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #eef0ff;
+        color: var(--accent);
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .callout {
+        border: 1px solid var(--accent-soft);
+        border-radius: 20px;
+        padding: 20px;
+        background: #f4f6ff;
+        margin-top: 24px;
+        line-height: 1.6;
+      }
+
+
+      .resource-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 16px;
+      }
+
+      .resource-table th,
+      .resource-table td {
+        padding: 12px;
+        border: 1px solid var(--border);
+        text-align: left;
+        font-size: 0.95rem;
+      }
+
+      .resource-table th {
+        background: #eef0ff;
+        color: var(--text-dark);
+        letter-spacing: 0.04em;
+      }
+
+      .resource-table td code {
+        font-size: 0.85rem;
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 18px;
+      }
+
+      .two-col ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        background: #eef0ff;
+        color: var(--accent);
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-right: 6px;
+      }
+
+      @media (max-width: 720px) {
+        .manual-shell {
+          padding: 32px 18px 48px;
+        }
+
+        main {
+          padding: 32px 24px;
+          border-radius: 20px;
+        }
+
+        .steps {
+          border-left: none;
+        }
+
+        .steps li::before {
+          left: 0;
+        }
+
+      }
+
+      @media print {
+        body {
+          background: #fff;
+          font-size: 0.95rem;
+        }
+
+        .manual-shell {
+          max-width: 100%;
+          margin: 0;
+          padding: 24px;
+        }
+
+        main {
+          border: none;
+          border-radius: 0;
+          padding: 16px 24px 24px;
+          box-shadow: none;
+        }
+
+        header {
+          padding: 12px 0 8px;
+          page-break-after: avoid;
+          page-break-inside: avoid;
+        }
+
+        .hero-grid,
+        .hero-guide {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+
+        /* Force Section 01 (requirements) to start on a new printed page */
+        #requirements {
+          page-break-before: always;
+          break-before: page;
+        }
+
+        header h1 {
+          font-size: 2rem;
+          margin-bottom: 4px;
+        }
+
+        header p {
+          font-size: 0.85rem;
+          margin-bottom: 4px;
+        }
+
+        .hero-grid {
+          gap: 8px;
+          margin-top: 8px;
+        }
+
+        .hero-card {
+          padding: 10px;
+          border-radius: 10px;
+          min-height: auto;
+        }
+
+        .hero-card span {
+          font-size: 0.65rem;
+        }
+
+        .hero-card h3 {
+          font-size: 0.95rem;
+          margin-bottom: 4px;
+        }
+
+        .hero-card p {
+          font-size: 0.8rem;
+          line-height: 1.3;
+        }
+
+        .hero-guide {
+          margin-top: 12px;
+          padding: 16px;
+        }
+
+        .hero-guide h3 {
+          font-size: 1rem;
+        }
+
+        .hero-guide ol {
+          font-size: 0.85rem;
+        }
+
+        section {
+          margin-bottom: 24px;
+        }
+
+        .manual-shell,
+        main,
+        header,
+        .hero-card,
+        .card,
+        .check-card,
+        .timeline-block,
+        .faq-card,
+        .callout,
+        .resource-table {
+          box-shadow: none !important;
+          border-color: #b5bec9;
+          background: #fff;
+        }
+
+        .tagline {
+          font-size: 0.7rem;
+        }
+
+        .card,
+        .check-card,
+        .timeline-block,
+        .faq-card {
+          padding: 14px;
+        }
+
+        .steps {
+          margin-top: 16px;
+        }
+
+        #requirements,
+        #setup {
+          page-break-before: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="manual-shell">
+      <header>
+        <p class="pill">BulSU Space &middot; Deployment Implementation Manual</p>
+        <h1>Deployment Manual & Runbook</h1>
+        <p>
+          Updated November 2025. This deployment guide is written for future BulSU Space developers
+          and  admins who will maintain the platform. Follow it when rebuilding the system,
+          installing dependencies, or deploying updates.
+        </p>
+        <div class="hero-grid">
+          <div class="hero-card">
+            <span>Environment</span>
+            <h3>Consistent setup for every developer</h3>
+            <p>Code steps keep every workstation aligned and avoid “works on my machine” issues.</p>
+          </div>
+          <div class="hero-card">
+            <span>Delivery</span>
+            <h3>Repeatable build and deploy steps</h3>
+            <p>Simple npm scripts, Firebase CLI commands, and quick checks make each deployment easy to repeat.</p>
+          </div>
+          <div class="hero-card">
+            <span>Reliability</span>
+            <h3>Pre-flight + rollback guidance</h3>
+            <p>Pre-flight lists, backup reminders, and rollback notes keep every rollout calm even under pressure.</p>
+          </div>
+        </div>
+        <div class="hero-guide">
+          <h3>Quick Deployment Checklist</h3>
+          <ol>
+            <li><strong>Gather essentials:</strong> Confirm Node.js 18 LTS, npm 9+, Firebase CLI 13+, and copy environment files from <code>ENV_VARIABLES_NEEDED.md</code>. Log in via <code>firebase login</code> using the deployment account.</li>
+            <li><strong>Prep the workspace:</strong> Unzip the latest project package, open it in VS Code, run <code>npm install</code> at the root, then repeat inside <code>functions/</code> so both front-end and backend scripts share clean dependencies.</li>
+            <li><strong>Validate locally:</strong> Launch <code>npm start</code> in both terminals, hit <code>http://localhost:3000</code>, and trigger key scripts (presence monitor, test-* utilities) to ensure credentials and emulators behave before touching production.</li>
+            <li><strong>Ship confidently:</strong> Execute <code>npm run build</code>, deploy with <code>npx firebase deploy --only hosting</code> (plus rules/functions if needed), then follow the smoke-test checklist to watch logs and user journeys for the first 15 minutes.</li>
+          </ol>
+        </div>
+      </header>
+
+      <main>
+        <section id="requirements">
+          <p class="tagline">Section 01</p>
+          <h2>Baseline Requirements</h2>
+          <p>Confirm these before unzipping the project archive or running <code>npm install</code>.</p>
+          <div class="grid-3">
+            <div class="card">
+              <strong>Workstation & OS</strong>
+              <ul>
+                <li>Windows 10/11, macOS 13+, or Ubuntu 22.04 LTS fully patched.</li>
+                <li>At least 8 GB RAM (16 GB recommended) and 10 GB free storage for node modules + build artifacts.</li>
+                <li>Stable internet with access to npm registry, Firebase Hosting, and Google APIs.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <strong>Tooling</strong>
+              <ul>
+                <li>Node.js 18 LTS (use <code>nvm</code> or <code>fnm</code> to match <code>package.json</code> engines).</li>
+                <li>npm 9+ and Firebase CLI 13+ (<code>npm install -g firebase-tools</code>).</li>
+                <li>Optional helpers: Git, VS Code, PowerShell 5.1+/Terminal, Postman.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <strong>Credentials & Secrets</strong>
+              <ul>
+                <li>Firebase project owner/editor access to <code>bulsu-space</code> production project.</li>
+                <li>Service account JSON for local admin scripts (store inside <code>.secrets/</code>, never commit).</li>
+                <li>Environment variables from <code>ENV_VARIABLES_NEEDED.md</code> (FCM keys, signaling endpoints, analytics IDs).</li>
+              </ul>
+            </div>
+            </div>
+          <table class="resource-table">
+            <thead>
+              <tr>
+                <th>Resource</th>
+                <th>Location</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Project root</td>
+                <td><code>BulSU-Space/project</code></td>
+                <td>Front-end React app, hosting artifacts.</td>
+              </tr>
+              <tr>
+                <td>Cloud Functions</td>
+                <td><code>functions/</code></td>
+                <td>Presence hooks, scheduled scripts.</td>
+              </tr>
+              <tr>
+                <td>Docs</td>
+                <td><code>docs/*.md</code></td>
+                <td>Security, storage, weather, secrets references.</td>
+              </tr>
+              <tr>
+                <td>Automation scripts</td>
+                <td><code>scripts/</code></td>
+                <td>Bulk updates, test seeders, monitoring.</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="setup">
+          <p class="tagline">Section 02</p>
+          <h2>Project Checkout & Dependency Install</h2>
+          <p>Use this updated six-step recipe whenever you onboard a new device or refresh the environment.</p>
+          <ol class="steps">
+            <li data-step="01">
+              Extract the latest <code>BulSU-Space.zip</code> package into a workspace you control (example: <code>C:/BulSU-Space</code>). Keep the root folder name unchanged.
+            </li>
+            <li data-step="02">
+              Open VS Code (or your preferred IDE) and load <code>BulSU-Space/project</code>. All remaining commands assume this directory.
+            </li>
+            <li data-step="03">
+              Run <code>npm install</code> from the project root terminal. Do not interrupt; first run can take several minutes while Tailwind/CRACO deps compile.
+            </li>
+            <li data-step="04">
+              Open a second terminal, execute <code>cd functions</code>, then <code>npm install</code> (first-time only). After install, run <code>npm start</code> to spin up emulated functions/watchers.
+            </li>
+            <li data-step="05">
+              Return to the primary terminal and run <code>npm start</code>. This launches the React dev server, applies CRACO overrides, and watches Tailwind styles.
+            </li>
+            <li data-step="06">
+              Verify both terminals stay green. If one crashes, stop both, clear <code>node_modules</code>, and repeat the install process before continuing feature work.
+            </li>
+          </ol>
+          <div class="two-col" style="margin-top: 32px;">
+            <div>
+              <h3><span class="badge">Verify</span>Development services</h3>
+              <ul>
+                <li>Front-end served at <code>http://localhost:3000</code>.</li>
+                <li>Functions emulator (if enabled) logs incoming requests.</li>
+                <li>Presence monitor scripts (under <code>scripts/</code>) respond when invoked manually.</li>
+              </ul>
+            </div>
+            <div>
+              <h3><span class="badge">Optional</span>Emulator extras</h3>
+              <ul>
+                <li>Run <code>firebase emulators:start --only firestore,auth</code> for offline QA.</li>
+                <li>Seed mock data using <code>scripts/test-*.js</code> utilities.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="deployment">
+          <p class="tagline">Section 03</p>
+          <h2>Deployment Workflow</h2>
+          <p>Use this streamlined flow for both staging and production. Swap the Firebase project via <code>--project</code> when pushing outside production.</p>
+          <div class="timeline">
+            <div class="timeline-block">
+              <span>Phase 01</span>
+              <strong>Prepare build</strong>
+              <p>Run <code>npm run lint</code> (if configured) and optional unit tests. Clean previous artifacts with <code>Remove-Item build -Recurse -Force</code> so stale files cannot leak into the release.</p>
+            </div>
+            <div class="timeline-block">
+              <span>Phase 02</span>
+              <strong>Compile assets</strong>
+              <p>Execute <code>npm run build</code>. Confirm <code>build/index.html</code>, <code>asset-manifest.json</code>, and service worker files regenerate without warnings.</p>
+            </div>
+            <div class="timeline-block">
+              <span>Phase 03</span>
+              <strong>Deploy hosting</strong>
+              <p>Run <code>npx firebase deploy --only hosting</code>. Include <code>--project production-id</code> (or alias) if you are not already targeting production.</p>
+            </div>
+            <div class="timeline-block">
+              <span>Phase 04</span>
+              <strong>Post-release checks</strong>
+              <p>Visit the live site, test sign-in, messages, and notifications. Monitor Firebase Hosting + Functions logs for anomalies during the first 15 minutes.</p>
+            </div>
+          </div>
+          <div class="callout">
+            <strong>Need to ship rules or functions?</strong> Run <code>firebase deploy --only functions,firestore:rules,storage</code> immediately after hosting so all layers stay in sync with <code>firestore.rules</code>, <code>storage.rules</code>, and <code>functions/src</code>.
+          </div>
+        </section>
+
+        <section id="ops">
+          <p class="tagline">Section 04</p>
+          <h2>Extended Operational Needs</h2>
+          <p>Use these guardrails to keep BulSU Space reliable while multiple colleges share the deployment.</p>
+          <div class="grid-3">
+            <div class="card">
+              <strong>Environment Variables</strong>
+              <ul>
+                <li>Maintain <code>.env.local</code> (dev), <code>.env.production</code> (CI), and keep a vaulted copy for DR.</li>
+                <li>Refresh values using <code>ENV_VARIABLES_NEEDED.md</code> whenever Firebase rotates keys.</li>
+                <li>Mirror CDN-specific flags via <code>netlify.toml</code> or <code>vercel.json</code> if alternate hosting is used.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <strong>Security & Access</strong>
+              <ul>
+                <li>Review <code>docs/SECRETS_MANAGEMENT.md</code> after every release cycle.</li>
+                <li>Rotate Firebase service account keys at least once per semester and immediately after staff turnover.</li>
+                <li>Require MFA on deployment accounts and lock unused roles in IAM.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <strong>Backups & DR</strong>
+              <ul>
+                <li>Export Firestore rules via <code>deploy-database-rules.ps1</code> before every production deploy.</li>
+                <li>Snapshot Realtime Database using <code>database.rules.backup*.json</code> scripts.</li>
+                <li>Archive <code>build/</code> as <code>builds/&lt;date&gt;-release.zip</code> so rollbacks stay under ten minutes.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="predeploy">
+          <p class="tagline">Section 05</p>
+          <h2>Pre-deploy Checklist</h2>
+          <div class="checklist">
+            <div class="check-card">
+              <h3>Code & Config</h3>
+              <ul>
+                <li>Latest <code>master</code> merged, linted, and pushed.</li>
+                <li><code>firebase.json</code>, <code>firestore.rules</code>, <code>storage.rules</code> double-checked for pending edits.</li>
+                <li>Manifest icons, FCM keys, and messaging service worker versions confirmed.</li>
+              </ul>
+            </div>
+            <div class="check-card">
+              <h3>Data Integrity</h3>
+              <ul>
+                <li>Backup critical collections or export to GCS prior to schema tweaks.</li>
+                <li>Validate Firestore indexes via <code>firestore.indexes.json</code> and deploy if new composite indexes exist.</li>
+                <li>Confirm any migration scripts in <code>scripts/</code> completed successfully.</li>
+              </ul>
+            </div>
+            <div class="check-card">
+              <h3>People & Comms</h3>
+              <ul>
+                <li>Notify admins via STATUS_REPORT channel or Teams chat.</li>
+                <li>Post maintenance notice on the announcements feed 30 minutes in advance.</li>
+                <li>Assign an on-call owner for post-release monitoring and incident intake.</li>
+              </ul>
+            </div>
+            <div class="check-card">
+              <h3>Rollback Plan</h3>
+              <ul>
+                <li>Store the prior build zip locally and in cloud storage.</li>
+                <li>Record <code>firebase hosting:versions:list</code> output (version ID + timestamp).</li>
+                <li>Document revert steps for Firestore rules or indexes changed in this release.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="tests">
+          <p class="tagline">Section 06</p>
+          <h2>Smoke Tests After Deploy</h2>
+          <div class="two-col">
+            <div>
+              <h3>Functional</h3>
+              <ul>
+                <li>Sign-in + MFA flow for both student and admin QA accounts.</li>
+                <li>News feed shows new announcements without manual refresh.</li>
+                <li>Presence indicator updates within 30 seconds when the browser closes.</li>
+                <li>Push notifications arrive via FCM (confirm latest <code>firebase-messaging-sw.js</code> shipped).</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Operational</h3>
+              <ul>
+                <li>Firebase Hosting dashboard shows the new release ID and status green.</li>
+                <li>Functions/Firestore logs stay free of uncaught exceptions for at least 10 minutes.</li>
+                <li>Google Analytics (or GA4) receives events from staged user journeys.</li>
+                <li>Support desk + admins notified that deployment finished.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="troubleshooting">
+          <p class="tagline">Section 07</p>
+          <h2>Troubleshooting & Recovery</h2>
+          <div class="faq-grid">
+            <div class="faq-card">
+              <h3><code>npm install</code> fails</h3>
+              <p>Delete <code>node_modules</code> and <code>package-lock.json</code>, run <code>npm cache clean --force</code>, then reinstall. If corporate proxies block downloads, toggle to mobile hotspot temporarily.</p>
+            </div>
+            <div class="faq-card">
+              <h3>Firebase deploy auth error</h3>
+              <p>Run <code>firebase login --reauth</code>, set the project alias via <code>firebase use production-id</code>, and retry the deploy.</p>
+            </div>
+            <div class="faq-card">
+              <h3>Build succeeds, UI blank</h3>
+              <p>Check <code>build/index.html</code> for missing <code>%PUBLIC_URL%</code> vars. Regenerate using the latest <code>.env</code> entries.</p>
+            </div>
+            <div class="faq-card">
+              <h3>Functions emulator stuck</h3>
+              <p>Kill orphan ports with <code>npx kill-port 5001 8080</code>, clear <code>firebase-debug.log</code>, then restart <code>npm start</code> inside <code>functions/</code>.</p>
+            </div>
+            <div class="faq-card">
+              <h3>Rollback needed</h3>
+              <p>Run <code>firebase hosting:rollback</code> with the saved version ID, or redeploy the last known-good zip from <code>builds/&lt;date&gt;</code>.</p>
+            </div>
+            <div class="faq-card">
+              <h3>Presence scripts fail</h3>
+              <p>Verify service account credentials used by <code>presence-function-monitor.js</code> and confirm Realtime DB rules were not tightened during release.</p>
+            </div>
+          </div>
+          <div class="callout">
+            <strong>Need more?</strong> Review <code>docs/SECURITY_IMPLEMENTATION.md</code>, <code>docs/SECRETS_MANAGEMENT.md</code>, and <code>flow/POSTING_FLOW.md</code> when troubleshooting feature-specific regressions.
+          </div>
+        </section>
+
+        <section id="billing-turnover">
+          <p class="tagline">Billing</p>
+          <h2>Billing & Owner Turnover</h2>
+          <p>If you are performing a turnover of the Firebase project billing account and project ownership, contact <code>cout.johnpaul.torres@gmail.com</code> to initiate the handover. Below are the recommended steps, information to include in the handoff, and console (web UI) steps the billing contact can follow to add the new database owner/admin and update the billing account.</p>
+
+          <h3>What to include in your initial email</h3>
+          <ul>
+            <li><strong>Project ID:</strong> the Firebase/GCP project ID (example: <code>bulsu-space</code>).</li>
+            <li><strong>New admin email:</strong> the Google account to be added as Owner/Admin (example: <code>new-admin@example.com</code>).</li>
+            <li><strong>Billing change request:</strong> whether to transfer the billing account or link a different billing account (include billing account ID if known).</li>
+            <li><strong>Preferred transfer window:</strong> date/time for the change and expected downtime (if any).</li>
+            <li><strong>Confirm backups:</strong> note that Firestore/Realtime Database backups have been taken and where they are stored (GCS path or zip archive).</li>
+          </ul>
+
+          <h3>Console (recommended) steps the billing contact should follow</h3>
+          <ol>
+            <li>Open the <strong>Firebase Console</strong> → select the project → click <em>Project settings</em> → <em>Users and permissions</em>. Click <em>Add member</em>, enter the new admin's email, and assign the <strong>Owner</strong> role (or the minimum set of roles you prefer).</li>
+            <li>Open the <strong>Google Cloud Console</strong> → <em>IAM & Admin</em> → <em>IAM</em>. Verify the new member appears with the expected role(s). Add roles like <code>Owner</code> or targeted roles (e.g., Billing Admin, Firestore/Realtime DB Admin) if needed.</li>
+            <li>To change billing: open <strong>Billing</strong> → select the billing account → <em>Account Management</em> → <em>Manage members</em>. Add the new billing administrator or transfer account control as appropriate.</li>
+            <li>Confirm the project is linked to the intended billing account: <strong>Billing</strong> → <em>Billing page</em> → <em>Projects linked to this billing account</em>.</li>
+          </ol>
+
+
+          <h3>Post-transfer checklist</h3>
+          <ul>
+            <li>Verify the new admin can access Firebase Console, view/change rules, and deploy functions.</li>
+            <li>Rotate any service account keys shared during the handover and update any local <code>.secrets/</code> or CI vault entries.</li>
+            <li>Deploy test rules and a small test release to ensure hosting, functions, and database permissions work under the new owner.</li>
+            <li>Document the change in <code>STATUS_REPORT.md</code> with the transfer timestamp, new owner email, and billing account ID.</li>
+          </ul>
+
+          <!-- Sample email template removed per request -->
+
+          <div class="callout">
+            <strong>Security note:</strong> Never send service account JSON files over unencrypted email. Use a secure file share or a vault (GCP Secret Manager, Vault) and rotate keys immediately after the handover.
+          </div>
+        </section>
+
+        <section id="contacts">
+          <p class="tagline">Section 08</p>
+          <h2>Contact & Escalation Matrix</h2>
+          <div class="two-col">
+            <div>
+              <h3>Primary</h3>
+              <ul>
+                <li><span class="badge">Support</span> support@bulsuspace.edu.ph</li>
+                <li><span class="badge">Security</span> security@bulsuspace.edu.ph</li>
+                <li><span class="badge">Infra</span> infra-ops@bulsuspace.edu.ph</li>
+                <li><span class="badge">Billing</span> cout.johnpaul.torres@gmail.com &mdash; turnover of billing account and database owner</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Escalation Window</h3>
+              <ul>
+                <li>Within 15 minutes: revert or hotfix owner on-call.</li>
+                <li>Within 60 minutes: notify Campus ICT head + admin desk.</li>
+                <li>Within 24 hours: publish post-mortem in STATUS_REPORT.md.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="appendix">
+          <p class="tagline">Section 09</p>
+          <h2>Appendix: Quick Commands & References</h2>
+          <div class="grid-3">
+            <div class="card">
+              <strong>Daily shortcuts</strong>
+              <ul>
+                <li><code>npm run start</code> &mdash; launch the main dev server.</li>
+                <li><code>npm run build</code> &mdash; produce optimized hosting output.</li>
+                <li><code>npx firebase deploy --only hosting</code> &mdash; publish latest build.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <strong>Monitoring aides</strong>
+              <ul>
+                <li><code>presence-function-monitor.js</code> &mdash; confirm realtime listeners.</li>
+                <li><code>test-activity-logging.js</code> &mdash; verify audit trail writes.</li>
+                <li><code>debug-presence-init.js</code> &mdash; confirm init handshake.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <strong>Release templates</strong>
+              <ul>
+                <li><code>STATUS_REPORT.md</code> &mdash; summarize outcome within 24 hours.</li>
+                <li><code>DEPLOYMENT.md</code> &mdash; review overarching strategy.</li>
+                <li><code>SECURITY_SETUP.md</code> &mdash; confirm platform policies.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="callout">
+            <strong>Tip:</strong> Print this appendix or export to PDF for incident drills so you can operate even without network access to the repo.
+          </div>
+        </section>
+      </main>
+
+      <footer>BulSU Space &copy; 2025 &middot; Deployment Manual v1.2</footer>
+    </div>
+  </body>
+</html>

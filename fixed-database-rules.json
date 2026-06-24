@@ -1,0 +1,33 @@
+{
+  "rules": {
+    "userCalls": {
+      ".indexOn": ["caller", "callee"],
+      "$uid": {
+        ".read": "auth !== null && (auth.uid === $uid || data.child('callee').val() === auth.uid)",
+        ".write": "auth !== null && (auth.uid === $uid || data.child('callee').val() === auth.uid)"
+      }
+    },
+    "status": {
+      "$uid": {
+        ".read": true,
+        ".write": "$uid === auth.uid || auth !== null"
+      }
+    },
+    "connections": {
+      "$uid": {
+        ".read": true,
+        ".write": "$uid === auth.uid || auth !== null"
+      }
+    },
+    "bazooka": {
+      ".read": true,
+      ".write": true
+    },
+    ".read": "auth !== null",
+    ".write": "auth !== null",
+    ".info": {
+      ".read": true,
+      ".write": false
+    }
+  }
+}

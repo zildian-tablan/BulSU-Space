@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BulSU Space User Manual</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 12mm;
+      }
+
+      :root {
+        --bg: #f6f7f8;
+        --bg-alt: #eceff1;
+        --panel: #ffffff;
+        --border: #d7dce0;
+        --shadow: rgba(33, 33, 33, 0.08);
+        --text-dark: #1f1f1f;
+        --text-mid: #4a4a4a;
+        --text-light: #777;
+        --accent: #6b6b6b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Inter", "Helvetica Neue", sans-serif;
+        color: var(--text-mid);
+        background: linear-gradient(135deg, var(--bg), var(--bg-alt));
+        min-height: 100vh;
+      }
+
+      .manual-page {
+        max-width: 960px;
+        margin: 0 auto 48px;
+        padding: 48px;
+        background: var(--panel);
+        border-radius: 28px;
+        box-shadow: 0 30px 60px var(--shadow);
+      }
+
+      header {
+        padding: 64px 24px 32px;
+        text-align: center;
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: clamp(2rem, 4vw, 3rem);
+        color: var(--text-dark);
+        letter-spacing: 0.04em;
+      }
+
+      header p {
+        margin: 16px auto 0;
+        max-width: 720px;
+        color: var(--text-light);
+        line-height: 1.6;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin: 32px auto 0;
+        max-width: 1000px;
+      }
+
+      .hero-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 20px;
+        text-align: left;
+        box-shadow: 0 10px 25px var(--shadow);
+        break-inside: avoid;
+      }
+
+      .hero-card h3 {
+        margin: 0 0 8px;
+        color: var(--text-dark);
+        font-size: 1rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .hero-card p {
+        margin: 0;
+        color: var(--text-mid);
+        line-height: 1.5;
+        font-size: 0.95rem;
+      }
+
+      main {
+        padding: 0 24px 64px;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      section {
+        margin-bottom: 28px;
+        padding: 32px 0;
+        break-inside: avoid;
+      }
+
+      section h2 {
+        margin-top: 0;
+        color: var(--text-dark);
+        font-size: 1.4rem;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--text-light);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-top: 24px;
+      }
+
+      .step-card {
+        border: 1px dashed var(--border);
+        border-radius: 16px;
+        padding: 20px;
+        break-inside: avoid;
+      }
+
+      .step-card span {
+        display: block;
+        font-size: 0.85rem;
+        color: var(--text-light);
+        letter-spacing: 0.12em;
+      }
+
+      .step-card strong {
+        display: block;
+        margin-top: 8px;
+        color: var(--text-dark);
+        font-size: 1.05rem;
+      }
+
+      .onboarding-notes {
+        margin-top: 20px;
+        padding-left: 0;
+      }
+
+      .onboarding-notes li {
+        border: none;
+        padding: 8px 0;
+        color: var(--text-mid);
+      }
+
+      .two-col {
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+
+      .list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .list li {
+        border-bottom: 1px solid var(--border);
+        padding: 14px 0;
+        line-height: 1.5;
+      }
+
+      .list li:last-child {
+        border-bottom: none;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        font-size: 0.75rem;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .timeline {
+        position: relative;
+        padding-left: 24px;
+        margin-top: 16px;
+      }
+
+      .timeline::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 6px;
+        width: 2px;
+        background: var(--border);
+      }
+
+      .timeline-item {
+        position: relative;
+        padding: 18px 0 18px 24px;
+      }
+
+      .timeline-item::before {
+        content: "";
+        position: absolute;
+        left: -2px;
+        top: 24px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+
+      .faq-block {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+        margin-top: 16px;
+        background: #f9f9f9;
+        break-inside: avoid;
+      }
+
+      .faq-block h4 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+        color: var(--text-dark);
+      }
+
+      .faq-block p {
+        margin: 0;
+        color: var(--text-mid);
+        line-height: 1.5;
+      }
+
+      .nav-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+
+      .nav-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px;
+        background: #fbfbfb;
+        box-shadow: 0 8px 18px var(--shadow);
+        break-inside: avoid;
+      }
+
+      .nav-card h3 {
+        margin: 0 0 6px;
+        font-size: 1.05rem;
+        color: var(--text-dark);
+      }
+
+      .nav-card p {
+        margin: 0;
+        color: var(--text-mid);
+        line-height: 1.4;
+        font-size: 0.95rem;
+      }
+
+      footer {
+        text-align: center;
+        padding: 16px;
+        color: var(--text-light);
+        font-size: 0.85rem;
+      }
+
+      .capture-hint {
+        margin-top: 32px;
+        padding: 16px 20px;
+        border: 1px dashed var(--border);
+        border-radius: 14px;
+        font-size: 0.9rem;
+        color: var(--text-light);
+        background: #fafafa;
+        text-align: center;
+      }
+
+      @media (max-width: 640px) {
+        .manual-page {
+          padding: 32px 20px;
+          border-radius: 0;
+          box-shadow: none;
+        }
+
+        section {
+          padding: 24px;
+        }
+
+        header {
+          padding: 48px 16px 24px;
+        }
+      }
+
+      @media print {
+        body {
+          background: #ffffff;
+          color: #000000;
+        }
+
+        .manual-page {
+          margin: 0;
+          padding: 0;
+          border-radius: 0;
+          box-shadow: none;
+          background: transparent;
+        }
+
+        header,
+        section,
+        .hero-card,
+        .step-card,
+        .nav-card,
+        .faq-block,
+        footer {
+          box-shadow: none;
+          border-color: #bfc5ca;
+          background: #ffffff;
+        }
+
+        .capture-hint {
+          display: none;
+        }
+
+        code {
+          color: #111111;
+          background: #f2f2f2;
+          padding: 0 4px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="manual-page">
+      <header>
+        <p class="pill">BulSU Space &middot; Academic Social Platform</p>
+        <h1>User Manual & Onboarding Guide</h1>
+        <p>
+          Welcome to BulSU Space&mdash;the unified social, academic, and collaboration
+          hub for students, faculty, alumni, and administrators of Bulacan State
+          University. This guide walks you through secure sign-in, daily workflows,
+          and the platform's real-time collaboration features.
+        </p>
+        <div class="hero-grid">
+          <div class="hero-card">
+            <h3>Always in Sync</h3>
+            <p>Live updates keep classes, orgs, and announcements aligned without needing to refresh.</p>
+          </div>
+          <div class="hero-card">
+            <h3>Role-Aware</h3>
+            <p>The experience adapts to whether you are a student, faculty member, alumni, or admin.</p>
+          </div>
+          <div class="hero-card">
+            <h3>Secure by Design</h3>
+            <p>Safeguards protect every conversation and keep campus information private.</p>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section>
+          <h2>1 &middot; Onboarding Roadmap</h2>
+          <p>Follow these steps as soon as your campus account is activated so your classmates and offices can find you.</p>
+          <div class="steps">
+            <div class="step-card">
+              <span>Step 01</span>
+              <strong>Set Up Your Account</strong>
+              Check your outlook email for the automated account credentials sent by BulSU Space. If you did not receive it, contact the Campus Registrar Office.
+            </div>
+            <div class="step-card">
+              <span>Step 02</span>
+              <strong>Log In Securely</strong>
+              Visit <code>https://bulsuspace.web.app/signin</code>, and enter your credentials, choose Sign In. It is followed by the Multifactor Authentication step. If the page says your access is paused, wait for the notice or message the admin desk.
+            </div>
+            <div class="step-card">
+              <span>Step 03</span>
+              <strong>Complete Your Profile</strong>
+              Open Profile &gt; Edit to add your preferred name, campus, program, and contact details so classmates know they are talking to you.
+            </div>
+            <div class="step-card">
+              <span>Step 04</span>
+              <strong>Learn the Status Indicator</strong>
+              Keep one tab open while you work so the online indicator stays accurate. Close the tab or sign out when you are finished.
+            </div>
+          </div>
+          <ul class="list onboarding-notes">
+            <li>Read the pinned announcement on the home feed for your college-specific reminders.</li>
+            <li>Join events or organization spaces recommended by your instructor or coordinator so you receive the right updates.</li>
+            <li>Bookmark support@bulsuspace.edu.ph so you can quickly request assistance if you get stuck.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>2 &middot; Main Navigation</h2>
+          <p>The menu on the left (desktop) or bottom (mobile) is organized into the areas below. Open them in order during onboarding to understand what each space does.</p>
+          <div class="nav-grid">
+            <div class="nav-card">
+              <h3>Home Feed</h3>
+              <p>See announcements, classroom reminders, club updates, and pinned posts from admins. Scroll daily to stay in sync.</p>
+            </div>
+            <div class="nav-card">
+              <h3>Messages</h3>
+              <p>Chat with classmates or staff. Presence indicators show whether the other person is active before you send a note.</p>
+            </div>
+            <div class="nav-card">
+              <h3>Groups</h3>
+              <p>Join academic or organization spaces. Each group has its own posts, files, and quick polls.</p>
+            </div>
+            <div class="nav-card">
+              <h3>Events</h3>
+              <p>Browse seminars, deadlines, and campus-wide programs. RSVP so organizers know you are attending.</p>
+            </div>
+            <div class="nav-card">
+              <h3>Jobs & Opportunities</h3>
+              <p>Alumni and partners can post openings. Students can save listings and message posters inside the same screen.</p>
+            </div>
+            <div class="nav-card">
+              <h3>Profile & Settings</h3>
+              <p>Update your photo, bio, and notification preferences. Use this area when something in your account changes.</p>
+            </div>
+            <div class="nav-card">
+              <h3>Notifications</h3>
+              <p>Tap the bell icon to review mentions, reactions, approvals, and reports that need your attention.</p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>3 &middot; Sharing Updates & Messaging</h2>
+          <p>Use these quick steps whenever you want to post, reply, or reach someone directly.</p>
+          <div class="two-col">
+            <div>
+              <h3>Posting to the feed</h3>
+              <ul class="list">
+                <li>Select the <strong>New Post</strong> button on the home feed.</li>
+                <li>Add your text. Use the attach icon to include images, documents, or short clips.</li>
+                <li>Choose the audience (campus, class group, or everyone) if the form offers the option.</li>
+                <li>Press <strong>Share</strong>. The post appears instantly for people who can view it.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Commenting and reactions</h3>
+              <ul class="list">
+                <li>Open any post and type your reply in the comment field.</li>
+                <li>Use reactions to acknowledge updates without writing a full response.</li>
+                <li>If something seems off-topic or unsafe, choose the <em>Report</em> option in the post menu so admins can review it.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Sending messages</h3>
+              <ul class="list">
+                <li>Go to <strong>Messages</strong> and pick an existing conversation or start a new one.</li>
+                <li>The status dot beside each name shows if the person is online or recently active.</li>
+                <li>Send text, photos, or attachments. Messages sync across web sessions as long as you stay signed in.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Joining or creating groups</h3>
+              <ul class="list">
+                <li>Open <strong>Groups</strong>, search for your class, organization, or department, then tap <strong>Join</strong>.</li>
+                <li>Group moderators can approve membership requests and remove old threads when needed.</li>
+                <li>Only create a new group if your college or adviser asked you to manage it.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>4 &middot; Role Highlights</h2>
+          <div class="two-col">
+            <div>
+              <h3>Students</h3>
+              <ul class="list">
+                <li><span class="badge">Feed</span> Read classroom reminders, guidance notes, and campus news delivered to your role.</li>
+                <li><span class="badge">Engage</span> Comment, react, and send direct messages to classmates or mentors.</li>
+                <li><span class="badge">Requests</span> Ask to join course groups or appeal for access when transferring sections.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Faculty & Advisers</h3>
+              <ul class="list">
+                <li><span class="badge">Classes</span> Publish lessons, attach handouts, and tag the correct sections.</li>
+                <li><span class="badge">Moderate</span> Pin answers, highlight exemplary work, and tidy discussions.</li>
+                <li><span class="badge">Approve</span> Accept or deny student requests to access restricted course spaces.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Organization Officers</h3>
+              <ul class="list">
+                <li><span class="badge">Manage</span> Maintain organization groups, membership lists, and pinned rules.</li>
+                <li><span class="badge">Promote</span> Schedule events, volunteer drives, and meeting recaps.</li>
+                <li><span class="badge">Document</span> Upload accomplishment reports and photos for transparency.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Alumni & Industry Partners</h3>
+              <ul class="list">
+                <li><span class="badge">Mentor</span> Join groups that match your college to share advice and open roles.</li>
+                <li><span class="badge">Careers</span> Post internships, hiring alerts, and immersion opportunities.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Campus Admins & Support Staff</h3>
+              <ul class="list">
+                <li><span class="badge">Monitor</span> Review reported posts, login warnings, and presence dashboards.</li>
+                <li><span class="badge">Assist</span> Reset accounts, reassign roles, and coordinate with colleges.</li>
+                <li><span class="badge">Alerts</span> Publish campus-wide advisories, security notices, and emergency updates.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Library Services</h3>
+              <ul class="list">
+                <li><span class="badge">Updates</span> Post book fair notices, due-date reminders, and study-space schedules.</li>
+                <li><span class="badge">Guides</span> Share borrowing procedures, research tips, and service hours.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Clinic & Infirmary</h3>
+              <ul class="list">
+                <li><span class="badge">Health Alerts</span> Announce medical outreach, vaccination days, and heat or weather advisories.</li>
+                <li><span class="badge">Care Tips</span> Give wellness reminders and explain how to request clinic support.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>5 &middot; Typical Day in BulSU Space</h2>
+          <div class="timeline">
+            <div class="timeline-item">
+              <strong>Start of Day</strong>
+              <p>Open the home feed, skim pinned announcements, and acknowledge any alerts waiting in your notifications.</p>
+            </div>
+            <div class="timeline-item">
+              <strong>Midday Collaboration</strong>
+              <p>Share updates, answer classmates, and upload files to a group post so everyone has the same copy.</p>
+            </div>
+            <div class="timeline-item">
+              <strong>Afternoon Follow-ups</strong>
+              <p>Check Messages to respond to pending chats, confirm meeting times, or send reminders.</p>
+            </div>
+            <div class="timeline-item">
+              <strong>Evening Wrap-up</strong>
+              <p>Review the Events list for tomorrow, log out of shared devices, and close the tab once your status can go offline.</p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>6 &middot; Safety & Support</h2>
+          <div class="two-col">
+            <div>
+              <h3>Your good habits</h3>
+              <ul class="list">
+                <li>Keep your password private and change it if you suspect someone else has seen it.</li>
+                <li>When using a shared computer, sign out and close the tab so no one can post as you.</li>
+                <li>Use the "Report" button beneath any post or message that feels unsafe or disrespectful.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>What the platform handles</h3>
+              <ul class="list">
+                <li>Only the correct roles (student, faculty, alumni, admin) can view or edit each space.</li>
+                <li>Unusual sign-in patterns trigger temporary locks until support reviews them.</li>
+                <li>Daily activity records help admins trace issues and keep the community accountable.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>7 &middot; Troubleshooting & Contacts</h2>
+          <div class="faq-block">
+            <h4>Signed in but the feed looks empty</h4>
+            <p>Refresh the page, then check if your profile shows the right campus and role. If not, message your college coordinator to update it.</p>
+          </div>
+          <div class="faq-block">
+            <h4>Status stays offline even when I'm active</h4>
+            <p>Keep only one BulSU Space tab open and interact with the page every few minutes. Battery saver modes can pause the status indicator.</p>
+          </div>
+          <div class="faq-block">
+            <h4>Uploads take too long</h4>
+            <p>Compress large photos or videos before sending. A stable Wi-Fi connection shortens upload time for everyone.</p>
+          </div>
+          <div class="faq-block">
+            <h4>I was locked out after mistakes</h4>
+            <p>Wait for the cooldown timer shown on the sign-in page. If you need urgent access, email the admin desk with your ID number.</p>
+          </div>
+          <div class="faq-block">
+            <h4>Notifications feel overwhelming</h4>
+            <p>Open Profile &gt; Settings and lower the alerts you don’t need, then leave only the essentials such as mentions and approvals.</p>
+          </div>
+          <div class="faq-block">
+            <h4>A post needs correction after publishing</h4>
+            <p>Use the three-dot menu on the post to edit the text or remove it. Repost only after updating the files or wording.</p>
+          </div>
+          <div class="faq-block">
+            <h4>I can’t find a required group</h4>
+            <p>Search by course code or organization name inside the Groups tab. If it still doesn’t appear, ask your adviser to invite you directly.</p>
+          </div>
+          <div class="faq-block">
+            <h4>Someone posted something inappropriate</h4>
+            <p>Use the Report option under the post or comment. Describe what happened so moderators can act quickly.</p>
+          </div>
+          <div class="faq-block">
+            <h4>I switched devices and my messages look empty</h4>
+            <p>Sign out, refresh the browser, then sign back in so the app rebuilds your message list from the server.</p>
+          </div>
+          <div class="faq-block">
+            <h4>Calendar reminders aren’t appearing</h4>
+            <p>Open Events, select the entry, and tap “Add to calendar” again. Confirm your browser allows pop-ups so the reminder can sync.</p>
+          </div>
+          <div class="two-col" style="margin-top: 32px;">
+            <div>
+              <h3>Contact Points</h3>
+              <ul class="list">
+                <li><span class="badge">Support</span> support@bulsuspace.edu.ph</li>
+                <li><span class="badge">Security</span> security@bulsuspace.edu.ph</li>
+                <li><span class="badge">Admin Desk</span> admin-desk@bulsuspace.edu.ph</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Where else to look</h3>
+              <ul class="list">
+                <li>Ask your college coordinator if you need your role or group updated.</li>
+                <li>Check the pinned announcement on the home feed for fresh reminders.</li>
+                <li>Download <code>docs/USER_MANUAL.txt</code> if you want an offline copy of this guide.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        BulSU Space &copy; 2025 &middot; Built for the BulSU community.
+      </footer>
+    </div>
+  </body>
+</html>

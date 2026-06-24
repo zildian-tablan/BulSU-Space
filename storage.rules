@@ -1,0 +1,76 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to upload to debug-uploads for testing
+    match /debug-uploads/{fileName} {
+      allow read, write: if request.auth != null && request.resource.size < 50 * 1024 * 1024;
+    }
+
+    // Allow authenticated users to read all files
+    match /{filePath=**} {
+      allow read: if request.auth != null;
+    }
+
+    // Allow authenticated users to write to their own user files
+    match /users/{userId}/{fileName} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow authenticated users to upload post files (supports nested folders)
+    match /posts/{postPath=**} {
+      allow write: if request.auth != null;
+    }
+
+    // Allow authenticated users to upload space post files (supports nested folders)
+    // Path pattern: space_posts/<generatedId>_<originalName>
+    match /space_posts/{postPath=**} {
+      allow write: if request.auth != null && request.resource.size < 100 * 1024 * 1024; // 100MB limit
+      allow read: if request.auth != null;
+    }
+
+    // Allow authenticated users to upload group cover images (used when creating a space)
+    // Path pattern: groups/<generatedId>_<originalName>
+    match /groups/{fileName} {
+      allow write: if request.auth != null && request.resource.size < 10 * 1024 * 1024; // 10MB limit (adjust as needed)
+      allow read: if request.auth != null; // Keep private to authenticated users only
+    }
+
+    // Allow authenticated users to upload message attachments to their chats
+    match /messages/{chatId}/{fileName} {
+      allow write: if request.auth != null;
+      allow read: if request.auth != null;
+    }
+
+    // Allow authenticated users to upload event cover images
+    match /events/{fileName} {
+      allow write: if request.auth != null && request.resource.size < 10 * 1024 * 1024; // 10MB limit
+      allow read: if request.auth != null;
+    }
+
+    // Allow authenticated users to upload news images
+    match /news/{fileName} {
+      allow write: if request.auth != null && request.resource.size < 10 * 1024 * 1024; // 10MB limit
+      allow read: if request.auth != null;
+    }
+
+    // Allow uploads for alumni request proofs only from authenticated, non-anonymous users
+    // Files saved under: alumni_requests/{requestId}/{fileName}
+    match /alumni_requests/{requestId}/{fileName} {
+      allow write: if request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && request.resource.size < 10 * 1024 * 1024 // 10MB per file
+        && (
+          request.resource.contentType.matches('image/.*') ||
+          request.resource.contentType == 'application/pdf'
+        );
+      // Do not allow public read; admins should access files via the Firebase Console or an authenticated admin interface
+      allow read: if false;
+    }
+
+    // Allow authenticated users to upload flares
+    match /flares/{userId}/{fileName} {
+      allow write: if request.auth != null && request.auth.uid == userId && request.resource.size < 50 * 1024 * 1024; // 50MB limit
+      allow read: if request.auth != null;
+    }
+  }
+}

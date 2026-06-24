@@ -1,0 +1,730 @@
+import React, { useState, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
+import { 
+  XMarkIcon, CalendarIcon, MapPinIcon, SparklesIcon, PhotoIcon,
+  GlobeAltIcon, DocumentTextIcon
+} from '@heroicons/react/24/outline';
+import { Timestamp } from 'firebase/firestore';
+import { EventCategory, uploadEventCoverImage } from '../../services/eventService';
+
+// Default cover images for different event categories
+const DEFAULT_COVER_IMAGES = {
+  Academic: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=1000&auto=format&fit=crop',
+  Workshop: 'https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=1000&auto=format&fit=crop',
+  Seminar: 'https://images.unsplash.com/photo-1560523160-754a9e25c68f?q=80&w=1000&auto=format&fit=crop',
+  Conference: 'https://images.unsplash.com/photo-1573164713988-8665fc963095?q=80&w=1000&auto=format&fit=crop',
+  Social: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?q=80&w=1000&auto=format&fit=crop',
+  Cultural: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?q=80&w=1000&auto=format&fit=crop',
+  Sports: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=1000&auto=format&fit=crop',
+  Career: 'https://images.unsplash.com/photo-1560523160-754a9e25c68f?q=80&w=1000&auto=format&fit=crop',
+  Research: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?q=80&w=1000&auto=format&fit=crop',
+  Technology: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=1000&auto=format&fit=crop',
+  'Health & Wellness': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=1000&auto=format&fit=crop',
+  Environmental: 'https://images.unsplash.com/photo-1576267423429-569309b31e84?q=80&w=1000&auto=format&fit=crop',
+  Other: 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?q=80&w=1000&auto=format&fit=crop'
+} as const;
+
+// Event categories for better organization
+const EVENT_CATEGORIES = [
+  'Academic',
+  'Workshop',
+  'Seminar',
+  'Conference',
+  'Social',
+  'Cultural',
+  'Sports',
+  'Career',
+  'Research',
+  'Technology',
+  'Health & Wellness',
+  'Environmental',
+  'Other'
+] as const;
+
+// Common event locations at BulSU (restricted list per request)
+const COMMON_LOCATIONS = [
+  'BulSU Hagonoy Activity Center',
+  'BulSU Hagonoy Audio Visual Room(AVR)',
+  'BulSU Hagonoy Main Building',
+  'BulSU Hagonoy IT Building',
+  'BulSU Main Campus',
+] as const;
+
+// Enhanced Create Event Modal Component
+export interface EventCreateModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreate: (eventData: {
+    title: string;
+    description: string;
+    location: string;
+    category: EventCategory;
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    endTime: string;
+    coverImage?: string;
+    registrationLink?: string;
+  }) => void;
+}
+
+const EventCreateModal: React.FC<EventCreateModalProps> = ({ isOpen, onClose, onCreate }) => {
+  // State for form fields
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [location, setLocation] = useState('');
+  const [registrationLink, setRegistrationLink] = useState('');
+  const [category, setCategory] = useState<EventCategory>('Academic');
+  const [startDate, setStartDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [coverImage, setCoverImage] = useState('');
+  const [useCustomLocation, setUseCustomLocation] = useState(false);
+  const [customLocation, setCustomLocation] = useState('');
+  
+  // State for UI
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const modalRef = useRef<HTMLDivElement>(null);
+  
+  // State for image upload
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Smart time generation based on category
+  const getDefaultTimeForCategory = (category: string) => {
+    const categoryTimes = {
+      Academic: { start: '09:00', duration: 3 },
+      Workshop: { start: '13:00', duration: 3 },
+      Seminar: { start: '14:00', duration: 2 },
+      Conference: { start: '09:00', duration: 8 },
+      Social: { start: '18:00', duration: 4 },
+      Cultural: { start: '17:00', duration: 3 },
+      Sports: { start: '15:00', duration: 2 },
+      Career: { start: '10:00', duration: 6 },
+      Research: { start: '10:00', duration: 4 },
+      Technology: { start: '10:00', duration: 4 },
+      'Health & Wellness': { start: '08:00', duration: 2 },
+      Environmental: { start: '07:30', duration: 3.5 },
+      Other: { start: '10:00', duration: 2 }
+    };
+    
+    return categoryTimes[category as keyof typeof categoryTimes] || categoryTimes.Other;
+  };
+
+  // Function to handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      // Check if file is an image
+      if (!file.type.startsWith('image/')) {
+        setErrors(prev => ({ ...prev, coverImage: 'Please select an image file.' }));
+        return;
+      }
+      
+      // Check file size (limit to 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors(prev => ({ ...prev, coverImage: 'Image size must be less than 5MB.' }));
+        return;
+      }
+      
+      // Set the file for upload
+      setCoverImageFile(file);
+      
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onload = () => {
+        setCoverImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      
+      // Clear any previous errors
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.coverImage;
+        return newErrors;
+      });
+    }
+  };
+  
+  // Function to trigger file input click
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+  
+  // Function to cancel/remove the selected image
+  const handleRemoveImage = () => {
+    setCoverImage('');
+    setCoverImageFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
+  // Set smart defaults when modal opens or category changes
+  useEffect(() => {
+    if (isOpen) {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      // Set default dates
+      setStartDate(tomorrow.toISOString().split('T')[0]);
+      setEndDate(tomorrow.toISOString().split('T')[0]);
+      
+      // Set smart times based on category
+      const { start, duration } = getDefaultTimeForCategory(category);
+      setStartTime(start);
+      
+      // Calculate end time
+      const [hours, minutes] = start.split(':').map(Number);
+      const startMinutes = hours * 60 + minutes;
+      const endMinutes = startMinutes + (duration * 60);
+      const endHours = Math.floor(endMinutes / 60) % 24;
+      const endMins = endMinutes % 60;
+      setEndTime(`${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`);
+      
+      // Set default cover image based on category
+      setCoverImage(DEFAULT_COVER_IMAGES[category as keyof typeof DEFAULT_COVER_IMAGES] || DEFAULT_COVER_IMAGES.Other);
+      
+      // Reset other fields
+      setErrors({});
+      setUseCustomLocation(false);
+      setCustomLocation('');
+      
+  // Do not pre-select a location — require the user to choose one explicitly
+  setLocation('');
+    }
+  }, [isOpen, category]);
+
+  // Form validation
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!title.trim()) newErrors.title = 'Title is required';
+    if (!description.trim()) newErrors.description = 'Description is required';
+    if (!location.trim() && !useCustomLocation) newErrors.location = 'Location is required';
+    if (useCustomLocation && !customLocation.trim()) newErrors.customLocation = 'Custom location is required';
+    if (!startDate) newErrors.startDate = 'Start date is required';
+    if (!startTime) newErrors.startTime = 'Start time is required';
+    if (!endDate) newErrors.endDate = 'End date is required';
+    if (!endTime) newErrors.endTime = 'End time is required';
+    
+    // Validate that start date/time is before end date/time
+    if (startDate && startTime && endDate && endTime) {
+      const startDateTime = new Date(`${startDate}T${startTime}`);
+      const endDateTime = new Date(`${endDate}T${endTime}`);
+      
+      if (startDateTime >= endDateTime) {
+        newErrors.datetime = 'End date and time must be after start date and time';
+      }
+      
+      // Validate that event is not in the past
+      const now = new Date();
+      if (startDateTime <= now) {
+        newErrors.datetime = 'Event cannot be scheduled in the past';
+      }
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Close modal on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+    
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+    // Hide mobile navigation and prevent scrolling when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('modal-open-hide-navbar');
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.classList.remove('modal-open-hide-navbar');
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.classList.remove('modal-open-hide-navbar');
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  // Form submission handler
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      let finalCoverImageUrl = coverImage;
+      
+      // If a file was selected for upload, upload it to Firebase Storage
+      if (coverImageFile) {
+        setIsUploading(true);
+        try {
+          // Import and use the uploadEventCoverImage function from eventService
+          finalCoverImageUrl = await uploadEventCoverImage(coverImageFile);
+        } catch (uploadError) {
+          console.error('Error uploading cover image:', uploadError);
+          setErrors(prev => ({ ...prev, coverImage: 'Failed to upload image. Please try again.' }));
+          setIsLoading(false);
+          setIsUploading(false);
+          return;
+        }
+        setIsUploading(false);
+      }
+      
+      await onCreate({
+        title: title.trim(),
+        description: description.trim(),
+        location: useCustomLocation ? customLocation.trim() : location.trim(),
+        category,
+        startDate,
+        startTime,
+        endDate,
+        endTime,
+        coverImage: finalCoverImageUrl.trim() || undefined,
+        registrationLink: registrationLink.trim() || undefined
+      });
+      
+      // Reset form
+      setTitle('');
+      setDescription('');
+      setLocation('');
+      setCustomLocation('');
+      setRegistrationLink('');
+      setCategory('Academic');
+      setStartDate('');
+      setStartTime('');
+      setEndDate('');
+      setEndTime('');
+      setCoverImage('');
+      setCoverImageFile(null);
+      setUploadProgress(0);
+      setUseCustomLocation(false);
+      setErrors({});
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      onClose();
+    } catch (error) {
+      console.error('Error creating event:', error);
+      setErrors({ submit: 'Failed to create event. Please try again.' });    } finally {
+      setIsLoading(false);
+    }
+  };
+    if (!isOpen) return null;
+    const modalContent = (
+      <div
+        className="fixed inset-0 z-[9998] bg-black bg-opacity-70 backdrop-blur-sm animate-fadeIn"
+        onClick={onClose}
+        aria-modal="true"
+        role="dialog"
+      >
+        <div
+          ref={modalRef}
+          onClick={(e) => e.stopPropagation()}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl mx-auto px-0 sm:px-0 bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 rounded-3xl shadow-2xl border border-green-700/60 flex flex-col overflow-hidden max-h-[90vh] min-h-0"
+        >
+        {/* Decorative background accents */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-64 h-64 bg-green-500/10 rounded-full blur-3xl animate-pulse-slow" />
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-green-600/5 rounded-full blur-2xl" />
+        </div>
+        {/* Header */}
+        <div className="relative p-5 pb-4 border-b border-gray-700/40 flex items-center justify-between bg-gray-900/40 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <div className="relative h-10 w-10 flex items-center justify-center">
+              <span className="absolute inset-0 rounded-full bg-gradient-to-tr from-green-600/40 to-green-400/10 blur-xl animate-pulse-slow" />
+              <span className="absolute inset-0 rounded-full border-2 border-green-500/30 animate-spin-slow" />
+              <SparklesIcon className="h-5 w-5 text-green-300 relative z-10" />
+            </div>
+            <h2 className="text-xl font-bold text-white tracking-tight">
+              Create New Event
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            type="button"
+            className="p-2 rounded-full text-gray-400 hover:text-white hover:bg-red-600/20 border border-gray-700/50 hover:border-red-500/40 transition-all duration-200"
+            aria-label="Close"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Form */}
+  <form onSubmit={handleSubmit} className="relative flex flex-col h-full min-h-0">
+          <div
+            className="p-5 space-y-4 overflow-y-auto flex-grow pb-6 mobile-scrollbar-hide min-h-0"
+            style={{
+              '--input-focus-ring': '0 0 0 2px rgba(34, 197, 94, 0.2)',
+              '--input-focus-shadow': '0 0 8px rgba(34, 197, 94, 0.2)'
+            } as React.CSSProperties}
+          >
+            {/* Global error display */}
+            {(errors.datetime || errors.submit) && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 flex items-start gap-2 text-sm">
+                <XMarkIcon className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-red-300">{errors.datetime || errors.submit}</p>
+              </div>
+            )}
+            {/* Form Sections */}
+            <div className="space-y-3">
+              {/* Section 1: Basic Information */}
+              <div className="space-y-2"><div className="flex items-center gap-1 pb-1 border-b border-gray-700/50">                  <div className="w-4 h-4 rounded-full bg-gradient-to-r from-green-600/30 to-green-500/20 flex items-center justify-center ring-1 ring-green-500/30">
+                    <span className="text-green-400 text-[10px] font-bold">1</span>
+                  </div>
+                  <h3 className="text-xs font-semibold text-gray-200">Event Details</h3>
+                </div>
+
+                {/* Event Category */}
+                <div className="space-y-2">                  <label htmlFor="category" className="block text-xs text-gray-300 mb-1 font-medium">
+                    Event Category <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">                    <select
+                      id="category"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value as EventCategory)}
+                      className="block w-full px-2 py-1.5 bg-gray-800/60 border border-gray-700/50 rounded-lg text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500/40 appearance-none"
+                    >
+                      {EVENT_CATEGORIES.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Event Title */}
+                <div className="space-y-2">
+                  <label htmlFor="title" className="block text-sm text-gray-300 font-medium">
+                    Event Title <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Enter a descriptive title for your event"                    className={`block w-full px-2 py-1.5 bg-gray-800/60 border rounded-lg text-white shadow-sm focus:outline-none focus:ring-2 ${
+                      errors.title
+                        ? 'border-red-500/50 focus:ring-red-500/40 focus:border-red-500/40'
+                        : 'border-gray-700/50 focus:ring-green-500/40 focus:border-green-500/40'
+                    }`}
+                  />
+                  {errors.title && <p className="mt-1 text-sm text-red-400">{errors.title}</p>}
+                </div>
+
+                {/* Event Description */}
+                <div className="space-y-2">
+                  <label htmlFor="description" className="block text-sm text-gray-300 font-medium">
+                    Event Description <span className="text-red-400">*</span>
+                  </label>
+                  <textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    placeholder="Provide details about your event, what attendees can expect, and any other relevant information"                    className={`block w-full px-2 py-1.5 bg-gray-800/60 border rounded-lg text-white shadow-sm focus:outline-none focus:ring-2 ${
+                      errors.description
+                        ? 'border-red-500/50 focus:ring-red-500/40 focus:border-red-500/40'
+                        : 'border-gray-700/50 focus:ring-green-500/40 focus:border-green-500/40'
+                    }`}
+                  />
+                  {errors.description && <p className="mt-1 text-sm text-red-400">{errors.description}</p>}
+                </div>
+              </div>              {/* Section 2: Time and Location */}
+              <div className="space-y-2"><div className="flex items-center gap-1.5 pb-1.5 border-b border-gray-700/50">
+                  <div className="w-4 h-4 rounded-full bg-gradient-to-r from-green-600/30 to-green-500/20 flex items-center justify-center ring-1 ring-green-500/30">
+                    <span className="text-green-400 text-[10px] font-bold">2</span>
+                  </div>
+                  <h3 className="text-xs font-semibold text-gray-200">Date & Location</h3>
+                </div>{/* Event Date & Time */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">                  <div className="space-y-2">
+                    <label htmlFor="startDate" className="block text-sm text-gray-300 font-medium">
+                      Start Date <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      id="startDate"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className={`block w-full px-2 py-1.5 bg-gray-800/60 border rounded-lg text-white shadow-sm focus:outline-none focus:ring-2 ${
+                        errors.startDate
+                          ? 'border-red-500/50 focus:ring-red-500/40 focus:border-red-500/40'
+                          : 'border-gray-700/50 focus:ring-green-500/40 focus:border-green-500/40'
+                      }`}
+                    />
+                    {errors.startDate && <p className="mt-1 text-sm text-red-400">{errors.startDate}</p>}
+                  </div>                  <div className="space-y-2">
+                    <label htmlFor="startTime" className="block text-sm text-gray-300 font-medium">
+                      Start Time <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="time"
+                      id="startTime"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className={`block w-full px-2 py-1.5 bg-gray-800/60 border rounded-lg text-white shadow-sm focus:outline-none focus:ring-2 ${
+                        errors.startTime
+                          ? 'border-red-500/50 focus:ring-red-500/40 focus:border-red-500/40'
+                          : 'border-gray-700/50 focus:ring-green-500/40 focus:border-green-500/40'
+                      }`}
+                    />
+                    {errors.startTime && <p className="mt-1 text-sm text-red-400">{errors.startTime}</p>}
+                  </div>                  <div className="space-y-2">
+                    <label htmlFor="endDate" className="block text-sm text-gray-300 font-medium">
+                      End Date <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      id="endDate"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className={`block w-full px-2 py-1.5 bg-gray-800/60 border rounded-lg text-white shadow-sm focus:outline-none focus:ring-2 ${
+                        errors.endDate
+                          ? 'border-red-500/50 focus:ring-red-500/40 focus:border-red-500/40'
+                          : 'border-gray-700/50 focus:ring-green-500/40 focus:border-green-500/40'
+                      }`}
+                    />
+                    {errors.endDate && <p className="mt-1 text-sm text-red-400">{errors.endDate}</p>}
+                  </div>                  <div className="space-y-2">
+                    <label htmlFor="endTime" className="block text-sm text-gray-300 font-medium">
+                      End Time <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="time"
+                      id="endTime"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className={`block w-full px-2 py-1.5 bg-gray-800/60 border rounded-lg text-white shadow-sm focus:outline-none focus:ring-2 ${
+                        errors.endTime
+                          ? 'border-red-500/50 focus:ring-red-500/40 focus:border-red-500/40'
+                          : 'border-gray-700/50 focus:ring-green-500/40 focus:border-green-500/40'
+                      }`}
+                    />
+                    {errors.endTime && <p className="mt-1 text-sm text-red-400">{errors.endTime}</p>}
+                  </div>
+                </div>
+
+                {/* Event Location */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm text-gray-300 font-medium">
+                      Event Location <span className="text-red-400">*</span>
+                    </label>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="useCustomLocation"
+                        checked={useCustomLocation}
+                        onChange={(e) => setUseCustomLocation(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-700 text-green-600 focus:ring-green-500/40"
+                      />
+                      <label htmlFor="useCustomLocation" className="ml-2 block text-sm text-gray-400">
+                        Use custom location
+                      </label>
+                    </div>
+                  </div>
+
+                  {!useCustomLocation ? (
+                    <div className="relative">                      <select
+                        id="location"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        className={`block w-full px-2 py-1.5 bg-gray-800/60 border rounded-lg text-white shadow-sm focus:outline-none focus:ring-2 appearance-none ${
+                          errors.location
+                            ? 'border-red-500/50 focus:ring-red-500/40 focus:border-red-500/40'
+                            : 'border-gray-700/50 focus:ring-green-500/40 focus:border-green-500/40'
+                        }`}
+                      >
+                        <option value="">Select a location</option>
+                        {COMMON_LOCATIONS.map((loc) => (
+                          <option key={loc} value={loc}>
+                            {loc}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                      {errors.location && <p className="mt-1 text-sm text-red-400">{errors.location}</p>}
+                    </div>
+                  ) : (
+                    <div>
+                      <input
+                        type="text"
+                        id="customLocation"
+                        value={customLocation}
+                        onChange={(e) => setCustomLocation(e.target.value)}
+                        placeholder="Enter a custom location"                        className={`block w-full px-2 py-1.5 bg-gray-800/60 border rounded-lg text-white shadow-sm focus:outline-none focus:ring-2 ${
+                          errors.customLocation
+                            ? 'border-red-500/50 focus:ring-red-500/40 focus:border-red-500/40'
+                            : 'border-gray-700/50 focus:ring-green-500/40 focus:border-green-500/40'
+                        }`}
+                      />
+                      {errors.customLocation && <p className="mt-1 text-sm text-red-400">{errors.customLocation}</p>}
+                    </div>
+                  )}
+                </div>
+              </div>              {/* Section 3: Additional Details */}
+              <div className="space-y-2"><div className="flex items-center gap-1.5 pb-1 border-b border-gray-700/50">
+                  <div className="w-4 h-4 rounded-full bg-gradient-to-r from-green-600/30 to-green-500/20 flex items-center justify-center ring-1 ring-green-500/30">
+                    <span className="text-green-400 text-[10px] font-bold">3</span>
+                  </div>
+                  <h3 className="text-xs font-semibold text-gray-200">Additional Details</h3>
+                </div>                {/* Registration Link */}
+                <div className="space-y-2">
+                  <label htmlFor="registrationLink" className="block text-sm text-gray-300 font-medium">
+                    Registration Link <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="url"
+                    id="registrationLink"
+                    value={registrationLink}
+                    onChange={(e) => setRegistrationLink(e.target.value)}
+                    placeholder="https://forms.example.com/register"
+                    className="block w-full px-2 py-1.5 bg-gray-800/60 border border-gray-700/50 rounded-lg text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500/40"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Add a link where attendees can register or get more information about your event.
+                  </p>
+                </div>
+
+                {/* Cover Image Upload */}
+                <div className="space-y-2">
+                  <label className="block text-sm text-gray-300 font-medium">
+                    Cover Image <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <div className="mt-1">
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleUploadClick}
+                        className="px-3 py-1.5 bg-gray-800/80 hover:bg-gray-700/80 text-gray-300 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                        disabled={isUploading}
+                      >
+                        {!isUploading ? (
+                          <>
+                            <PhotoIcon className="h-4 w-4" />
+                            <span>Choose Image</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="h-4 w-4 border-2 border-t-transparent border-white rounded-full animate-spin" />
+                            <span>Uploading... {uploadProgress}%</span>
+                          </>
+                        )}
+                      </button>
+                      
+                      {coverImage && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          className="px-3 py-1.5 bg-red-700/50 hover:bg-red-600/50 text-red-100 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                          disabled={isUploading}
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                          <span>Remove</span>                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Hidden file input */}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </div>                  {/* Image Preview */}
+                  {coverImage && (
+                    <div className="mt-3">
+                      <div className="w-full h-48 sm:h-64 md:h-80 lg:h-96 xl:h-[28rem] rounded-lg overflow-hidden border border-gray-700/30 bg-gray-800/30">
+                        <img 
+                          src={coverImage} 
+                          alt="Cover preview" 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = DEFAULT_COVER_IMAGES[category] || DEFAULT_COVER_IMAGES.Other;
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Action Buttons */}
+          <div className="pt-4 pb-5 px-5 border-t border-gray-700/40 bg-gray-900/60 backdrop-blur-sm">
+            <div className="flex gap-4 justify-end items-center">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-gray-300 hover:text-white text-sm font-semibold transition-all duration-200 border border-gray-700/50 hover:border-gray-600/50 rounded-lg bg-gray-800/40 hover:bg-gray-800/60"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${!isLoading
+                  ? 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white shadow-lg hover:shadow-green-500/30 hover:scale-[1.03]'
+                  : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {isLoading ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-t-transparent border-white rounded-full animate-spin" />
+                    <span>Creating Event...</span>
+                  </>
+                ) : (
+                  <>
+                    <SparklesIcon className="h-4 w-4" />
+                    <span>Create Event</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
+        </div>
+      </div>
+    );
+    return ReactDOM.createPortal(modalContent, document.body);
+};
+
+// Using named export in addition to default export for better module interoperability
+export { EventCreateModal };
+export default EventCreateModal;

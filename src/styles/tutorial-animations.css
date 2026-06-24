@@ -1,0 +1,187 @@
+/* Tutorial page transition animations */
+@keyframes pageFadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pageSlideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pageSlideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pageSlideOutLeft {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+}
+
+@keyframes pageSlideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+}
+
+@keyframes tutorialPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(74, 222, 128, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
+
+@keyframes tutorialGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px 1px rgba(74, 222, 128, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px rgba(74, 222, 128, 0.8);
+  }
+}
+
+@keyframes tutorialSimpleFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tutorialBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes tutorialAppear {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Tutorial transition utility classes */
+.page-transition-fade-out {
+  animation: pageFadeOut 0.3s ease-in-out forwards;
+}
+
+.page-transition-fade-in {
+  animation: pageFadeIn 0.3s ease-in-out forwards;
+}
+
+.page-transition-slide-in-left {
+  animation: pageSlideInLeft 0.4s ease-out forwards;
+}
+
+.page-transition-slide-in-right {
+  animation: pageSlideInRight 0.4s ease-out forwards;
+}
+
+.page-transition-slide-out-left {
+  animation: pageSlideOutLeft 0.4s ease-out forwards;
+}
+
+.page-transition-slide-out-right {
+  animation: pageSlideOutRight 0.4s ease-out forwards;
+}
+
+.tutorial-highlight-pulse {
+  animation: tutorialPulse 2s infinite;
+}
+
+.tutorial-simple-fade-in {
+  animation: tutorialSimpleFadeIn 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.tutorial-highlight-glow {
+  animation: tutorialGlow 2s infinite;
+}
+
+.tutorial-highlight-bounce {
+  animation: tutorialBounce 2s infinite ease-in-out;
+}
+
+.tutorial-appear {
+  animation: tutorialAppear 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.tutorial-page-container {
+  position: relative;
+  overflow: hidden;
+  will-change: transform, opacity;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Tutorial target highlight styles */
+.tutorial-target-highlight {
+  position: relative;
+  z-index: 1;
+}
+
+.tutorial-target-highlight::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 8px;
+  background: rgba(74, 222, 128, 0.15);
+  z-index: -1;
+  backdrop-filter: blur(4px);
+  animation: tutorialGlow 2s infinite;
+}
